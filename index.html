@@ -1,0 +1,2192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NFA → DFA · Subset Construction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0b0c10;--ink2:#1a1d27;--ink3:#242838;--ink4:#2e3347;
+  --neon:#00e5a0;--neon2:#00bfff;--amber:#ffb84d;--coral:#ff6b6b;--violet:#a78bfa;
+  --txt:#f0ede6;--txt2:#9ba3bf;--txt3:#5a6380;
+  --grid:rgba(255,255,255,0.03);--r:8px;--border:rgba(255,255,255,0.06);
+}
+:root.light{
+  --ink:#f0f2f7;--ink2:#ffffff;--ink3:#e4e8f0;--ink4:#cdd3e0;
+  --neon:#009e6e;--neon2:#006faa;--amber:#b06800;--coral:#c93030;--violet:#5c35b5;
+  --txt:#1a1d27;--txt2:#4a5270;--txt3:#7a85a0;
+  --grid:rgba(0,0,0,0.04);--border:rgba(0,0,0,0.08);
+}
+:root.light body{background:var(--ink)}
+:root.light .header{background:rgba(240,242,247,0.97)}
+:root.light input[type=text],:root.light textarea{background:var(--ink3);border-color:var(--border);color:var(--txt)}
+:root.light .preset{background:var(--ink3)}
+:root.light .btn-ghost{color:var(--txt2);border-color:var(--border)}
+:root.light .btn-ghost:hover{border-color:rgba(0,0,0,.28);color:var(--txt)}
+:root.light .bicon{border-color:var(--border);color:var(--txt2)}
+:root.light .bicon:hover{border-color:var(--neon);color:var(--neon)}
+:root.light .narrator{background:var(--ink2)}
+:root.light .half-panel{background:var(--ink2)}
+:root.light .atbl th{background:var(--ink3)}
+:root.light .atbl td{border-color:rgba(0,0,0,.06)}
+:root.light .atbl thead{background:var(--ink3)}
+:root.light .input-card{background:var(--ink2)}
+
+html,body{height:100%;overflow:hidden}
+body{background:var(--ink);color:var(--txt);font-family:'DM Sans',sans-serif;font-size:15px;display:flex;flex-direction:column;min-width:0}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+/* ── HEADER ── */
+.header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:50px;border-bottom:1px solid var(--border);background:rgba(11,12,16,0.97);backdrop-filter:blur(20px);flex-shrink:0}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.08em;display:flex;align-items:center;gap:.4rem}
+.logo .arr{color:var(--neon)}
+.logo sup{font-family:'DM Sans',sans-serif;font-size:.48rem;color:var(--txt3);letter-spacing:.05em;text-transform:uppercase;vertical-align:super}
+.chip{display:inline-flex;align-items:center;gap:.3rem;padding:.15rem .55rem;border-radius:99px;font-size:.62rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.chip-g{background:rgba(0,229,160,.1);color:var(--neon);border:1px solid rgba(0,229,160,.2)}
+.bicon{width:30px;height:30px;padding:0;background:transparent;border:1px solid var(--border);color:var(--txt2);border-radius:6px;cursor:pointer;transition:all .15s;font-size:.95rem;display:inline-flex;align-items:center;justify-content:center}
+.bicon:hover{border-color:var(--neon);color:var(--neon)}
+
+/* ── HOME COVER SCREEN ── */
+#screen-home{flex:1;display:flex;position:relative;z-index:1;overflow:hidden}
+.home-left{flex:0 0 42%;display:flex;flex-direction:column;justify-content:center;padding:3rem 2.5rem 3rem 3rem;position:relative;border-right:1px solid var(--border)}
+.home-left::after{content:'';position:absolute;right:-1px;top:20%;bottom:20%;width:1px;background:linear-gradient(180deg,transparent,var(--neon),transparent);opacity:.5}
+.hl-eyebrow{font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:var(--neon);margin-bottom:1.1rem;display:flex;align-items:center;gap:.5rem}
+.hl-eyebrow::before{content:'';width:18px;height:1px;background:var(--neon)}
+.hl-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.6rem,5vw,4.2rem);letter-spacing:.04em;line-height:.95;color:var(--txt)}
+.hl-title em{font-style:normal;color:var(--neon);-webkit-text-stroke:.5px var(--neon);text-shadow:0 0 28px rgba(0,229,160,.35)}
+.hl-sub{font-size:.8rem;color:var(--txt2);line-height:1.75;margin-top:1.1rem;max-width:320px}
+.hl-tags{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:1.5rem}
+.hl-tag{font-size:.58rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:.22rem .65rem;border-radius:4px;border:1px solid var(--border);color:var(--txt3)}
+.hl-orb{position:absolute;bottom:-60px;right:-60px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,160,.07) 0%,transparent 70%);pointer-events:none}
+
+.home-right{flex:1;display:flex;flex-direction:column;justify-content:center;gap:0;padding:2rem 2rem 2rem 2.2rem;overflow-y:auto}
+.hr-section-label{font-size:.55rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--txt3);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem}
+.hr-section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.hc-row{display:flex;gap:.75rem;margin-bottom:1.1rem}
+.hcard{flex:1;background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1rem;display:flex;flex-direction:column;gap:.5rem;cursor:pointer;transition:border-color .18s,transform .18s,box-shadow .18s;position:relative;overflow:hidden;min-width:0}
+.hcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--hc-stripe,transparent);opacity:0;transition:opacity .18s}
+.hcard:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.3)}
+.hcard:hover{border-color:var(--hc-accent,var(--neon))}
+.hcard:hover::before{opacity:1}
+.hcard-icon{font-size:1.35rem;line-height:1}
+.hcard-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.1em;color:var(--txt)}
+.hcard-desc{font-size:.66rem;color:var(--txt3);line-height:1.55}
+.hcard-arrow{position:absolute;bottom:.75rem;right:.85rem;font-size:.7rem;color:var(--txt3);opacity:0;transition:opacity .15s,transform .15s}
+.hcard:hover .hcard-arrow{opacity:1;transform:translateX(3px)}
+.hcard-badge{position:absolute;top:.65rem;right:.65rem;font-size:.5rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:.1rem .4rem;border-radius:3px}
+.badge-theory{background:rgba(167,139,250,.15);color:var(--violet)}
+.badge-visual{background:rgba(0,191,255,.12);color:var(--neon2)}
+.badge-convert{background:rgba(255,184,77,.12);color:var(--amber)}
+
+#screen-input{flex:1;display:none;align-items:center;justify-content:center;position:relative;z-index:1;overflow:hidden}
+#screen-convert{flex:1;display:none;flex-direction:column;position:relative;z-index:1;min-height:0}
+
+/* ── THEORY SCREEN ── */
+#screen-theory{flex:1;display:none;flex-direction:column;position:relative;z-index:1;overflow-y:auto}
+.theory-wrap{max-width:820px;margin:0 auto;padding:2.5rem 1.5rem 3rem}
+.theory-back{font-size:.63rem;color:var(--txt3);cursor:pointer;padding:.18rem .4rem;border-radius:4px;transition:color .15s;display:inline-flex;align-items:center;gap:.3rem;margin-bottom:1.4rem}
+.theory-back:hover{color:var(--neon)}
+.theory-h1{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:.08em;color:var(--txt);margin-bottom:.3rem}
+.theory-lead{font-size:.82rem;color:var(--txt2);line-height:1.75;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.theory-section{margin-bottom:2rem}
+.theory-section h3{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.1em;color:var(--neon);margin-bottom:.7rem;display:flex;align-items:center;gap:.5rem}
+.theory-section h3::before{content:'';width:3px;height:1em;background:var(--neon);border-radius:2px}
+.theory-section p{font-size:.78rem;color:var(--txt2);line-height:1.8;margin-bottom:.65rem}
+.theory-section code{font-family:'Space Mono',monospace;font-size:.7rem;background:var(--ink3);padding:.1rem .35rem;border-radius:4px;color:var(--amber)}
+.theory-def{background:var(--ink2);border:1px solid var(--border);border-left:3px solid var(--violet);border-radius:0 8px 8px 0;padding:.85rem 1rem;margin:.8rem 0;font-size:.75rem;color:var(--txt2);line-height:1.75}
+.theory-def strong{color:var(--txt);font-weight:600}
+.theory-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem}
+.theory-chip{background:var(--ink3);border:1px solid var(--border);border-radius:8px;padding:.75rem .9rem}
+.theory-chip h4{font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--neon2);margin-bottom:.35rem}
+.theory-chip p{font-size:.7rem;color:var(--txt2);line-height:1.6;margin:0}
+.theory-table{width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:.68rem;margin-top:.75rem}
+.theory-table th{background:var(--ink3);padding:.4rem .7rem;border:1px solid var(--border);color:var(--txt3);text-align:left;font-size:.6rem;letter-spacing:.07em;text-transform:uppercase}
+.theory-table td{padding:.38rem .7rem;border:1px solid rgba(255,255,255,.04);color:var(--txt2)}
+.theory-table tr:hover td{background:rgba(255,255,255,.02)}
+.tc-g{color:var(--neon)}
+.tc-r{color:var(--coral)}
+.theory-cta{margin-top:2rem;padding:1.2rem 1.4rem;background:linear-gradient(135deg,rgba(0,229,160,.07),rgba(0,191,255,.07));border:1px solid rgba(0,229,160,.2);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.theory-cta p{font-size:.78rem;color:var(--txt2);line-height:1.6;margin:0}
+.theory-cta strong{color:var(--txt)}
+.input-card{background:var(--ink2);border:1px solid var(--border);border-radius:14px;padding:2rem;width:min(680px,96vw);max-height:calc(100vh - 80px);overflow-y:auto;display:flex;flex-direction:column;gap:1.1rem;position:relative;z-index:2}
+.input-card h2{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.1em;color:var(--txt2)}
+.presets{display:flex;gap:.4rem;flex-wrap:wrap}
+.preset{padding:.24rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--ink3);color:var(--txt2);font-size:.68rem;cursor:pointer;transition:all .15s}
+.preset:hover{border-color:var(--neon);color:var(--neon)}
+.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+.fg{display:flex;flex-direction:column;gap:.28rem}
+.fg.full{grid-column:1/-1}
+.fl{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3)}
+.fl .r{color:var(--neon)}
+input[type=text],textarea{width:100%;background:var(--ink3);border:1px solid var(--border);color:var(--txt);padding:.45rem .65rem;border-radius:var(--r);font-family:'Space Mono',monospace;font-size:.72rem;outline:none;transition:border-color .2s,box-shadow .2s;resize:none}
+input[type=text]:focus,textarea:focus{border-color:rgba(0,229,160,.45);box-shadow:0 0 0 3px rgba(0,229,160,.07)}
+textarea{line-height:1.7}
+.hint{font-size:.6rem;color:var(--txt3);line-height:1.5}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.35rem;padding:.5rem 1.2rem;border-radius:var(--r);border:none;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.82rem;cursor:pointer;transition:all .15s;letter-spacing:.02em}
+.btn-neon{background:var(--neon);color:#0b0c10}
+.btn-neon:hover{filter:brightness(1.12);transform:translateY(-1px);box-shadow:0 4px 18px rgba(0,229,160,.3)}
+.btn-ghost{background:transparent;color:var(--txt2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:rgba(255,255,255,.22);color:var(--txt)}
+.btn-sm{padding:.3rem .7rem;font-size:.72rem}
+.err{font-size:.7rem;color:var(--coral);background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.15);padding:.35rem .6rem;border-radius:6px}
+
+/* ── CONVERT SCREEN ── */
+.convert-main{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0;overflow:hidden;border-bottom:1px solid var(--border)}
+.half-panel{display:flex;flex-direction:column;overflow:hidden;background:var(--ink);border-right:1px solid var(--border);min-width:0}
+.half-panel:last-child{border-right:none}
+.half-head{display:flex;align-items:center;justify-content:space-between;padding:.38rem .85rem;border-bottom:1px solid var(--border);flex-shrink:0}
+.half-label{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.12em}
+.nfa-col .half-label{color:var(--violet)}
+.dfa-col .half-label{color:var(--neon)}
+.half-tag{font-size:.58rem;color:var(--txt3);font-family:'Space Mono',monospace}
+.half-info{font-size:.6rem;color:var(--txt3);font-family:'Space Mono',monospace}
+
+/* ── EDGE DRAG HANDLES ── */
+.edge-handle{opacity:0;transition:opacity .18s,transform .15s;transform-origin:center;transform-box:fill-box}
+.svg-area svg:hover .edge-handle{opacity:1}
+.edge-handle:hover{opacity:1 !important;transform:scale(1.55);cursor:grabbing}
+.edge-dragging .edge-handle{opacity:1}
+/* ── STATE DRAG ── */
+.state-drag-hit{cursor:grab}
+.state-drag-hit:active,.edge-dragging .state-drag-hit{cursor:grabbing}
+/* graph area */
+.svg-area{flex:0 0 auto;height:280px;position:relative;overflow:hidden;min-height:80px;max-height:65vh;resize:vertical}
+.svg-area svg{width:100%;height:100%;display:block}
+.svg-area::after{content:'⇕';position:absolute;bottom:2px;right:6px;font-size:.65rem;color:var(--txt3);pointer-events:none;opacity:.5}
+
+/* resizable table strip */
+.tbl-strip{flex:1;overflow-y:auto;border-top:1px solid var(--border);min-height:60px;}
+.tbl-strip::-webkit-scrollbar{width:3px;height:3px}
+.tbl-strip::-webkit-scrollbar-thumb{background:var(--ink4);border-radius:2px}
+.tbl-head-strip{font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);padding:.35rem .7rem .35rem;display:flex;align-items:center;gap:.45rem;position:sticky;top:0;background:var(--ink);z-index:3;border-bottom:1px solid var(--border)}
+.tbl-head-strip .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+:root.light .tbl-head-strip{background:var(--ink2)}
+.atbl{width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:.7rem}
+.atbl thead{position:sticky;top:0;z-index:2}
+.atbl th{padding:.27rem .5rem;background:var(--ink3);color:var(--txt3);border:1px solid var(--border);text-align:center;font-size:.62rem;letter-spacing:.07em;text-transform:uppercase}
+.atbl td{padding:.28rem .5rem;border:1px solid rgba(255,255,255,.04);text-align:center;color:var(--txt);transition:background .3s,color .3s}
+:root.light .atbl td{border-color:rgba(0,0,0,.06)}
+
+/* row highlights */
+.atbl tr.hl-nfa td{background:rgba(167,139,250,.15)!important}
+.atbl tr.hl-dfa td{background:rgba(0,229,160,.12)!important}
+/* cell highlight */
+.atbl td.cell-hot{background:rgba(255,184,77,.25)!important;color:var(--amber)!important;font-weight:700;transition:none}
+.atbl td.cell-new{animation:cellPop .55s ease both}
+@keyframes cellPop{0%{background:rgba(0,229,160,.5);transform:scale(1.07)}100%{background:inherit;transform:scale(1)}}
+@keyframes rowIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.row-enter{animation:rowIn .4s ease both}
+
+.cn{color:var(--neon);font-weight:700}
+.cn2{color:#c0b8ff;font-weight:700}
+.ca{color:var(--amber)}
+.cd{color:var(--coral);opacity:.75}
+.c-pend{color:var(--ink4);font-style:italic}
+
+/* ── NARRATOR ── */
+.narrator{flex-shrink:0;background:var(--ink2);border-top:2px solid var(--border);display:flex;align-items:stretch;min-height:70px;transition:border-color .35s;min-width:0;overflow:hidden}
+.narrator.t-init{border-top-color:rgba(167,139,250,.55)}
+.narrator.t-new{border-top-color:rgba(0,229,160,.55)}
+.narrator.t-trans{border-top-color:rgba(0,191,255,.55)}
+.narrator.t-dead{border-top-color:rgba(255,107,107,.55)}
+.narrator.t-done{border-top-color:rgba(255,184,77,.55)}
+.nar-icon{width:52px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;border-right:1px solid var(--border)}
+.nar-body{flex:1;padding:.5rem .85rem;display:flex;flex-direction:column;justify-content:center;gap:.15rem;min-width:0;overflow:hidden}
+.nar-badge{display:inline-block;font-size:.63rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.08rem .42rem;border-radius:4px;margin-bottom:.12rem}
+.eb-init{background:rgba(167,139,250,.15);color:var(--violet)}
+.eb-new{background:rgba(0,229,160,.12);color:var(--neon)}
+.eb-trans{background:rgba(0,191,255,.12);color:var(--neon2)}
+.eb-dead{background:rgba(255,107,107,.12);color:var(--coral)}
+.eb-done{background:rgba(255,184,77,.12);color:var(--amber)}
+.eb-idle{background:rgba(255,255,255,.05);color:var(--txt3)}
+.nar-text{font-size:.9rem;color:var(--txt);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nar-formula{font-family:'Space Mono',monospace;font-size:.69rem;color:var(--neon2);opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nar-controls{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.45rem;padding:.5rem .75rem;border-left:1px solid var(--border);flex-shrink:0;min-width:180px;max-width:220px}
+.nav-row{display:flex;gap:.4rem;align-items:center}
+.prog-wrap{width:100%;display:flex;align-items:center;gap:.5rem}
+.prog-track{flex:1;height:3px;background:var(--ink4);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--neon),var(--neon2));border-radius:2px;transition:width .4s ease}
+.step-ctr{font-family:'Space Mono',monospace;font-size:.68rem;color:var(--txt3);min-width:38px;text-align:right}
+.back-btn{font-size:.63rem;color:var(--txt3);cursor:pointer;padding:.18rem .4rem;border-radius:4px;transition:color .15s;display:flex;align-items:center;gap:.3rem}
+.back-btn:hover{color:var(--neon)}
+
+/* inline coloring for narrator text */
+.hn{color:#c0b8ff;font-weight:600}
+.hd{color:var(--neon);font-weight:600}
+.hs{color:var(--amber);font-weight:600}
+.hset{color:var(--neon2);font-weight:600}
+.hx{color:var(--coral);font-weight:600}
+
+/* ── STRING TESTER SCREEN ── */
+#screen-tester{flex:1;display:none;flex-direction:column;position:relative;z-index:1;overflow:hidden}
+.tester-wrap{display:flex;flex-direction:column;height:100%}
+.tester-top{flex-shrink:0;display:flex;align-items:stretch;border-bottom:1px solid var(--border);background:var(--ink2)}
+.tester-input-area{flex:1;padding:.7rem 1rem;display:flex;flex-direction:column;gap:.5rem;border-right:1px solid var(--border)}
+.tester-input-row{display:flex;gap:.5rem;align-items:flex-end}
+.tester-input-row .fg{flex:1}
+.tester-controls-bar{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;padding:.6rem .9rem;min-width:160px}
+.tester-body{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0;overflow:hidden}
+.tester-panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.tester-panel:last-child{border-right:none}
+.tester-panel-head{display:flex;align-items:center;justify-content:space-between;padding:.35rem .85rem;border-bottom:1px solid var(--border);flex-shrink:0}
+.tester-panel-label{font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.12em;color:var(--neon2)}
+.trace-strip{flex:1;overflow-y:auto;padding:.5rem .7rem;display:flex;flex-direction:column;gap:.3rem}
+.trace-step{display:flex;align-items:center;gap:.55rem;padding:.38rem .6rem;border-radius:6px;border:1px solid transparent;font-family:'Space Mono',monospace;font-size:.66rem;transition:all .3s;opacity:.45}
+.trace-step.ts-active{opacity:1;background:rgba(0,191,255,.08);border-color:rgba(0,191,255,.2)}
+.trace-step.ts-done{opacity:.75}
+.trace-step.ts-accept{background:rgba(0,229,160,.08);border-color:rgba(0,229,160,.2)!important;opacity:1}
+.trace-step.ts-reject{background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.2)!important;opacity:1}
+.ts-idx{width:18px;text-align:right;color:var(--txt3);font-size:.58rem;flex-shrink:0}
+.ts-sym{width:20px;text-align:center;font-weight:700;color:var(--amber);flex-shrink:0}
+.ts-arrow{color:var(--txt3);flex-shrink:0}
+.ts-state{font-weight:700}
+.ts-active .ts-state{color:var(--neon2)}
+.ts-accept .ts-state{color:var(--neon)}
+.ts-reject .ts-state{color:var(--coral)}
+.ts-note{font-size:.58rem;color:var(--txt3);margin-left:auto}
+.tester-svg-area{flex:1;position:relative;overflow:hidden}
+.tester-svg-area svg{width:100%;height:100%;display:block}
+.verdict-bar{flex-shrink:0;padding:.55rem 1rem;display:flex;align-items:center;gap:.7rem;border-top:1px solid var(--border);font-size:.78rem;font-weight:600;transition:background .4s,border-color .4s}
+.verdict-bar.v-accept{background:rgba(0,229,160,.08);border-top-color:rgba(0,229,160,.4);color:var(--neon)}
+.verdict-bar.v-reject{background:rgba(255,107,107,.08);border-top-color:rgba(255,107,107,.4);color:var(--coral)}
+.verdict-bar.v-idle{color:var(--txt3)}
+.string-chars{display:flex;gap:.3rem;flex-wrap:wrap;padding:.4rem 0}
+.sc{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:5px;font-family:'Space Mono',monospace;font-size:.7rem;font-weight:700;border:1px solid var(--border);background:var(--ink3);color:var(--txt2);transition:all .25s}
+.sc.sc-active{background:rgba(0,191,255,.18);border-color:var(--neon2);color:var(--neon2);transform:scale(1.15);box-shadow:0 0 10px rgba(0,191,255,.3)}
+.sc.sc-done{background:rgba(255,255,255,.04);color:var(--txt3)}
+.sc.sc-eps{color:var(--violet);border-color:rgba(167,139,250,.3)}
+
+/* ── MINIMIZATION ── */
+#screen-minimize{flex:1;display:none;flex-direction:column;position:relative;z-index:1;min-height:0}
+.min-main{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0;overflow:hidden;border-bottom:1px solid var(--border)}
+.min-panel{display:flex;flex-direction:column;overflow:hidden;background:var(--ink);border-right:1px solid var(--border);min-width:0}
+.min-panel:last-child{border-right:none}
+.min-panel-head{display:flex;align-items:center;justify-content:space-between;padding:.38rem .85rem;border-bottom:1px solid var(--border);flex-shrink:0}
+.min-panel-label{font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.12em}
+.min-svg-area{flex:0 0 auto;height:220px;position:relative;overflow:hidden;min-height:80px;resize:vertical}
+.min-svg-area svg{width:100%;height:100%;display:block}
+.min-svg-area::after{content:'⇕';position:absolute;bottom:2px;right:6px;font-size:.65rem;color:var(--txt3);pointer-events:none;opacity:.5}
+.min-tbl-strip{flex:1;overflow-y:auto;border-top:1px solid var(--border);min-height:60px}
+.min-tbl-strip::-webkit-scrollbar{width:3px}
+.min-tbl-strip::-webkit-scrollbar-thumb{background:var(--ink4);border-radius:2px}
+.pair-tbl{width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:.64rem}
+.pair-tbl th{padding:.27rem .5rem;background:var(--ink3);color:var(--txt3);border:1px solid var(--border);text-align:center;font-size:.56rem;letter-spacing:.07em;text-transform:uppercase;position:sticky;top:0;z-index:1}
+.pair-tbl td{padding:.28rem .5rem;border:1px solid rgba(255,255,255,.04);text-align:center;color:var(--txt);transition:background .4s}
+.pair-tbl td.p-dist{color:var(--coral);background:rgba(255,107,107,.07)}
+.pair-tbl td.p-eq{color:var(--neon);background:rgba(0,229,160,.07)}
+.pair-tbl td.p-unk{color:var(--txt3)}
+.pair-tbl td.p-hot{background:rgba(255,184,77,.25)!important;color:var(--amber)!important;font-weight:700}
+.eb-min{background:rgba(0,229,160,.12);color:var(--neon)}
+.eb-merged{background:rgba(167,139,250,.15);color:var(--violet)}
+.eb-already{background:rgba(255,184,77,.12);color:var(--amber)}
+.narrator.t-min{border-top-color:rgba(0,229,160,.55)}
+.narrator.t-merged{border-top-color:rgba(167,139,250,.55)}
+.narrator.t-already{border-top-color:rgba(255,184,77,.55)}
+
+@keyframes popIn{from{transform:scale(.1);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes edgeDraw{from{stroke-dashoffset:400}to{stroke-dashoffset:0}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulseRing{0%,100%{opacity:.5;r:30}50%{opacity:1;r:36}}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--ink4);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LANDING PAGE OVERLAY ═══════════════ -->
+<div id="landing-overlay" style="
+  position:fixed;inset:0;z-index:9999;
+  background:#0b0c10;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  overflow:hidden;
+  font-family:'DM Sans',sans-serif;
+">
+  <!-- Animated grid background -->
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;"></div>
+
+  <!-- Radial glow orbs -->
+  <div id="lp-orb1" style="position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,160,0.08) 0%,transparent 65%);top:-100px;left:-100px;animation:orbDrift1 8s ease-in-out infinite alternate;pointer-events:none;"></div>
+  <div id="lp-orb2" style="position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(0,191,255,0.07) 0%,transparent 65%);bottom:-80px;right:-80px;animation:orbDrift2 10s ease-in-out infinite alternate;pointer-events:none;"></div>
+  <div id="lp-orb3" style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(167,139,250,0.06) 0%,transparent 65%);top:40%;left:60%;animation:orbDrift3 7s ease-in-out infinite alternate;pointer-events:none;"></div>
+
+  <!-- Scanning line animation -->
+  <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none;">
+    <div id="lp-scan" style="position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,160,0.4),transparent);top:0;animation:scanLine 6s linear infinite;"></div>
+  </div>
+
+  <!-- Corner decorations -->
+  <div style="position:absolute;top:24px;left:24px;width:32px;height:32px;border-top:2px solid rgba(0,229,160,0.5);border-left:2px solid rgba(0,229,160,0.5);border-radius:2px;animation:fadeSlideIn 0.6s ease both;"></div>
+  <div style="position:absolute;top:24px;right:24px;width:32px;height:32px;border-top:2px solid rgba(0,229,160,0.5);border-right:2px solid rgba(0,229,160,0.5);border-radius:2px;animation:fadeSlideIn 0.6s 0.1s ease both;opacity:0;animation-fill-mode:both;"></div>
+  <div style="position:absolute;bottom:24px;left:24px;width:32px;height:32px;border-bottom:2px solid rgba(0,229,160,0.5);border-left:2px solid rgba(0,229,160,0.5);border-radius:2px;animation:fadeSlideIn 0.6s 0.2s ease both;opacity:0;animation-fill-mode:both;"></div>
+  <div style="position:absolute;bottom:24px;right:24px;width:32px;height:32px;border-bottom:2px solid rgba(0,229,160,0.5);border-right:2px solid rgba(0,229,160,0.5);border-radius:2px;animation:fadeSlideIn 0.6s 0.3s ease both;opacity:0;animation-fill-mode:both;"></div>
+
+  <!-- Top breadcrumb -->
+  <div style="position:absolute;top:32px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:8px;animation:fadeSlideIn 0.7s 0.2s ease both;opacity:0;animation-fill-mode:both;">
+    <span style="width:18px;height:1px;background:#00e5a0;display:inline-block;"></span>
+    <span style="font-family:'Space Mono',monospace;font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;color:#00e5a0;">Theory of Computation · CSE NSUT</span>
+    <span style="width:18px;height:1px;background:#00e5a0;display:inline-block;"></span>
+  </div>
+
+  <!-- Main content -->
+  <div style="text-align:center;position:relative;z-index:2;max-width:760px;padding:2rem;">
+
+    <!-- Eyebrow label -->
+    <div style="animation:fadeSlideIn 0.7s 0.35s ease both;opacity:0;animation-fill-mode:both;margin-bottom:1.5rem;">
+      <span style="display:inline-flex;align-items:center;gap:8px;padding:0.3rem 1rem;border:1px solid rgba(0,229,160,0.25);border-radius:99px;background:rgba(0,229,160,0.06);font-size:0.62rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#00e5a0;">
+        <span style="width:6px;height:6px;border-radius:50%;background:#00e5a0;display:inline-block;animation:pulse 2s ease-in-out infinite;"></span>
+        Interactive Visualiser
+      </span>
+    </div>
+
+    <!-- Main title -->
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2.8rem,7vw,5.8rem);letter-spacing:0.04em;line-height:0.92;color:#f0ede6;margin:0 0 0.5rem;animation:fadeSlideIn 0.8s 0.5s ease both;opacity:0;animation-fill-mode:both;">
+      Finite State
+    </h1>
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2.8rem,7vw,5.8rem);letter-spacing:0.04em;line-height:0.92;color:#f0ede6;margin:0 0 0.5rem;animation:fadeSlideIn 0.8s 0.6s ease both;opacity:0;animation-fill-mode:both;">
+      Machines
+    </h1>
+
+    <!-- NFA → DFA highlighted row -->
+    <div style="animation:fadeSlideIn 0.8s 0.75s ease both;opacity:0;animation-fill-mode:both;margin-bottom:1.8rem;">
+      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(1.8rem,4.5vw,3.6rem);letter-spacing:0.06em;line-height:1;display:inline-flex;align-items:center;gap:0.6rem;flex-wrap:wrap;justify-content:center;margin:0;">
+        <span style="color:#a78bfa;-webkit-text-stroke:0.5px #a78bfa;text-shadow:0 0 28px rgba(167,139,250,0.4);">NFA</span>
+        <span style="color:rgba(255,255,255,0.3);font-size:0.6em;">→</span>
+        <span style="color:#00e5a0;-webkit-text-stroke:0.5px #00e5a0;text-shadow:0 0 28px rgba(0,229,160,0.4);">DFA</span>
+        <span style="color:rgba(255,255,255,0.4);font-family:'DM Sans',sans-serif;font-size:0.38em;font-weight:400;letter-spacing:0.04em;">Conversion</span>
+      </h2>
+    </div>
+
+    <!-- Divider with state machine dots -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:1.8rem;animation:fadeSlideIn 0.7s 0.9s ease both;opacity:0;animation-fill-mode:both;">
+      <div style="height:1px;width:60px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12));"></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="width:8px;height:8px;border-radius:50%;border:1px solid #a78bfa;background:rgba(167,139,250,0.15);"></div>
+        <div style="width:20px;height:1px;background:rgba(0,229,160,0.4);position:relative;">
+          <div style="position:absolute;right:-3px;top:-3px;width:0;height:0;border-left:5px solid rgba(0,229,160,0.6);border-top:3px solid transparent;border-bottom:3px solid transparent;"></div>
+        </div>
+        <div style="width:8px;height:8px;border-radius:50%;border:2px solid #00e5a0;background:rgba(0,229,160,0.1);"></div>
+        <div style="width:20px;height:1px;background:rgba(0,229,160,0.4);position:relative;">
+          <div style="position:absolute;right:-3px;top:-3px;width:0;height:0;border-left:5px solid rgba(0,229,160,0.6);border-top:3px solid transparent;border-bottom:3px solid transparent;"></div>
+        </div>
+        <div style="width:8px;height:8px;border-radius:50%;border:2px solid #00e5a0;background:rgba(0,229,160,0.2);box-shadow:0 0 10px rgba(0,229,160,0.4);"></div>
+      </div>
+      <div style="height:1px;width:60px;background:linear-gradient(90deg,rgba(255,255,255,0.12),transparent);"></div>
+    </div>
+
+    <!-- Credential card -->
+    <div style="display:inline-flex;flex-direction:column;align-items:center;gap:4px;padding:0.9rem 2rem;border:1px solid rgba(255,255,255,0.07);border-radius:12px;background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);margin-bottom:2.8rem;animation:fadeSlideIn 0.7s 1.05s ease both;opacity:0;animation-fill-mode:both;">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:0.14em;color:#f0ede6;">Supreet Singh</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:0.62rem;color:#9ba3bf;letter-spacing:0.06em;">CSE · NSUT</span>
+        <span style="width:3px;height:3px;border-radius:50%;background:#5a6380;display:inline-block;"></span>
+        <span style="font-family:'Space Mono',monospace;font-size:0.6rem;color:#00e5a0;letter-spacing:0.08em;">2024UCM2333</span>
+      </div>
+    </div>
+
+    <!-- CTA button -->
+    <div style="animation:fadeSlideIn 0.7s 1.2s ease both;opacity:0;animation-fill-mode:both;">
+      <button id="lp-start-btn" onclick="launchApp()" style="
+        display:inline-flex;align-items:center;gap:10px;
+        padding:0.9rem 2.4rem;
+        background:#00e5a0;color:#0b0c10;
+        border:none;border-radius:10px;
+        font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;
+        cursor:pointer;letter-spacing:0.03em;
+        transition:all 0.2s;
+        box-shadow:0 0 0 0 rgba(0,229,160,0.4);
+        animation:ctaPulse 3s ease-in-out 2s infinite;
+        position:relative;overflow:hidden;
+      ">
+        <span>Get Started</span>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="transition:transform 0.2s;" id="lp-arrow">
+          <path d="M3.75 9H14.25M14.25 9L9.75 4.5M14.25 9L9.75 13.5" stroke="#0b0c10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent);pointer-events:none;"></div>
+      </button>
+    </div>
+
+    <!-- Bottom hint -->
+    <div style="margin-top:1.2rem;animation:fadeSlideIn 0.6s 1.5s ease both;opacity:0;animation-fill-mode:both;">
+      <span style="font-family:'Space Mono',monospace;font-size:0.55rem;color:#5a6380;letter-spacing:0.1em;">SUBSET CONSTRUCTION · MINIMIZATION · STEP-BY-STEP SIMULATION</span>
+    </div>
+  </div>
+
+  <style>
+    @keyframes orbDrift1{from{transform:translate(0,0) scale(1);}to{transform:translate(40px,30px) scale(1.08);}}
+    @keyframes orbDrift2{from{transform:translate(0,0) scale(1);}to{transform:translate(-35px,-25px) scale(1.06);}}
+    @keyframes orbDrift3{from{transform:translate(0,0) scale(1);}to{transform:translate(20px,-30px) scale(0.95);}}
+    @keyframes scanLine{0%{top:-2px;}100%{top:100%;}}
+    @keyframes fadeSlideIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.8);}}
+    @keyframes ctaPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,0.4);}50%{box-shadow:0 0 0 14px rgba(0,229,160,0);}}
+    @keyframes overlayExit{0%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(1.04);pointer-events:none;}}
+    #lp-start-btn:hover{filter:brightness(1.1);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,229,160,0.35)!important;}
+    #lp-start-btn:hover #lp-arrow{transform:translateX(3px);}
+    #lp-start-btn:active{transform:translateY(0);filter:brightness(0.95);}
+  </style>
+</div>
+
+<script>
+function launchApp(){
+  const overlay=document.getElementById('landing-overlay');
+  overlay.style.animation='overlayExit 0.55s cubic-bezier(0.4,0,0.2,1) both';
+  setTimeout(()=>{overlay.style.display='none';},520);
+}
+</script>
+<!-- ══════════════ END LANDING PAGE ══════════════ -->
+
+<!-- HEADER -->
+<header class="header" style="justify-content:center;position:relative;">
+  <div class="logo" style="cursor:pointer" onclick="goHome()">NFA<span class="arr"> → </span>DFA<sup>Subset Construction</sup></div>
+  <div style="display:flex;gap:.55rem;align-items:center;position:absolute;right:1.5rem;">
+    <span class="chip chip-g" id="hdr-chip" style="display:none"></span>
+    <button class="bicon" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+  </div>
+</header>
+
+<!-- ══════════ HOME / COVER SCREEN ══════════ -->
+<div id="screen-home">
+
+  <!-- LEFT HERO PANEL -->
+  <div class="home-left">
+    <div class="hl-eyebrow">Formal Language Theory</div>
+    <div class="hl-title">Finite<br>State<br><em>Machines</em></div>
+    <div class="hl-sub">An interactive toolkit for building, visualising, and converting automata — step by step, state by state.</div>
+    <div class="hl-tags">
+      <span class="hl-tag">NFA</span>
+      <span class="hl-tag">DFA</span>
+      <span class="hl-tag">ε-closure</span>
+      <span class="hl-tag">Subset Construction</span>
+      <span class="hl-tag">Transition Tables</span>
+    </div>
+    <div class="hl-orb"></div>
+  </div>
+
+  <!-- RIGHT CARD STRIP -->
+  <div class="home-right">
+
+    <div class="hr-section-label">Learn</div>
+    <div class="hc-row">
+      <div class="hcard" style="--hc-accent:var(--violet);--hc-stripe:var(--violet)" onclick="goToTheory()">
+        <span class="hcard-badge badge-theory">Theory</span>
+        <div class="hcard-icon">🧠</div>
+        <div class="hcard-title">Automata Theory</div>
+        <div class="hcard-desc">Understand what finite automata are, how they differ, and the maths behind them.</div>
+        <span class="hcard-arrow">→</span>
+      </div>
+    </div>
+
+    <div class="hr-section-label" style="margin-top:.4rem">Test</div>
+    <div class="hc-row">
+      <div class="hcard" style="--hc-accent:var(--neon2);--hc-stripe:var(--neon2)" onclick="goToTester()">
+        <span class="hcard-badge badge-visual">Animated</span>
+        <div class="hcard-icon">▷</div>
+        <div class="hcard-title">String Acceptor</div>
+        <div class="hcard-desc">Enter a DFA and a test string — watch each symbol consumed step by step with live state animation.</div>
+        <span class="hcard-arrow">→</span>
+      </div>
+    </div>
+
+    <div class="hr-section-label" style="margin-top:.4rem">Convert</div>
+    <div class="hc-row">
+      <div class="hcard" style="--hc-accent:var(--amber);--hc-stripe:var(--amber)" onclick="goToNFA()">
+        <span class="hcard-badge badge-convert">Step-by-step</span>
+        <div class="hcard-icon">⇄</div>
+        <div class="hcard-title">NFA → DFA</div>
+        <div class="hcard-desc">Run subset construction and watch each DFA state materialise from NFA state-sets — animated, narrated, pauseable.</div>
+        <span class="hcard-arrow">→</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════ THEORY SCREEN ══════════ -->
+<div id="screen-theory">
+  <div class="theory-wrap">
+    <div class="theory-back" onclick="goHome()">← Back to Home</div>
+    <div class="theory-h1">Automata Theory</div>
+    <div class="theory-lead">
+      A <strong style="color:var(--txt)">finite automaton</strong> is a mathematical model of computation — a machine that reads an input string symbol by symbol and decides, at the end, whether to <em style="font-style:normal;color:var(--neon)">accept</em> or <em style="font-style:normal;color:var(--coral)">reject</em> it. Despite their simplicity, finite automata underpin lexers, regex engines, network protocols, and hardware controllers.
+    </div>
+
+    <div class="theory-section">
+      <h3>What is a Finite Automaton?</h3>
+      <p>Formally, an automaton is a 5-tuple <code>(Q, Σ, δ, q₀, F)</code> where <code>Q</code> is a finite set of states, <code>Σ</code> is the input alphabet, <code>δ</code> is the transition function, <code>q₀ ∈ Q</code> is the start state, and <code>F ⊆ Q</code> is the set of accept states.</p>
+      <p>The machine starts in <code>q₀</code>, reads each character, follows the transition for that character, and accepts if it ends in a state in <code>F</code>.</p>
+      <div class="theory-def">
+        <strong>Accept condition:</strong> A string <code>w</code> is accepted if, after reading all of <code>w</code> starting from <code>q₀</code>, the machine is in some state <code>q ∈ F</code>. The set of all accepted strings is called the <strong>language</strong> of the automaton, written <strong>L(M)</strong>.
+      </div>
+    </div>
+
+    <div class="theory-section">
+      <h3>DFA vs NFA — Key Differences</h3>
+      <p>The two main flavours of finite automaton differ in how their transition function is defined.</p>
+      <div class="theory-grid">
+        <div class="theory-chip">
+          <h4>DFA — Deterministic</h4>
+          <p>From every state, on every symbol, there is <em>exactly one</em> next state. <code>δ: Q × Σ → Q</code>. Simple to simulate; one active state at a time.</p>
+        </div>
+        <div class="theory-chip">
+          <h4>NFA — Non-deterministic</h4>
+          <p>From a state, a symbol may lead to <em>zero, one, or many</em> next states. <code>δ: Q × Σ → 2^Q</code>. Easier to design; harder to execute directly.</p>
+        </div>
+      </div>
+      <table class="theory-table" style="margin-top:1rem">
+        <thead><tr><th>Property</th><th>DFA</th><th>NFA</th></tr></thead>
+        <tbody>
+          <tr><td>Transitions per symbol</td><td class="tc-g">Exactly 1</td><td class="tc-g">0, 1 or many</td></tr>
+          <tr><td>ε-transitions allowed</td><td class="tc-r">No</td><td class="tc-g">Yes (ε-NFA)</td></tr>
+          <tr><td>Simulation cost</td><td class="tc-g">O(n) per symbol</td><td>O(n·|Q|) per symbol</td></tr>
+          <tr><td>Expressive power</td><td colspan="2" style="text-align:center;color:var(--neon2)">Identical — both recognise exactly the regular languages</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="theory-section">
+      <h3>Epsilon (ε) Transitions</h3>
+      <p>An <code>ε-NFA</code> allows the machine to change state <em>without consuming any input</em>. These free moves make NFAs far more convenient to construct — for example, when combining two automata for union or concatenation.</p>
+      <div class="theory-def">
+        <strong>ε-closure(S):</strong> The set of all states reachable from any state in <code>S</code> by following zero or more ε-transitions. When simulating an ε-NFA we always take the ε-closure after every step.
+      </div>
+      <p>In this tool you can write <code>eps</code> or <code>ε</code> in the alphabet and transitions fields to add epsilon moves.</p>
+    </div>
+
+    <div class="theory-section">
+      <h3>Subset Construction (Powerset Algorithm)</h3>
+      <p>Every NFA can be converted to an equivalent DFA. The idea is elegant: each DFA state represents a <em>set of NFA states</em> the machine could currently be in.</p>
+      <p><strong style="color:var(--txt)">Algorithm sketch:</strong></p>
+      <p>1. Start DFA state = ε-closure({q₀})<br>
+         2. For each unprocessed DFA state <code>S</code> and each symbol <code>a ∈ Σ</code>, compute <code>move(S, a)</code> then take its ε-closure — that is the next DFA state.<br>
+         3. A DFA state is accepting if any NFA state in its set is accepting.<br>
+         4. Repeat until no new states appear.</p>
+      <div class="theory-def">
+        <strong>Worst case:</strong> An NFA with <code>n</code> states can produce up to <code>2ⁿ</code> DFA states. In practice most states are unreachable and the blowup is rarely observed.
+      </div>
+    </div>
+
+    <div class="theory-cta">
+      <p><strong>Ready to see it live?</strong><br>Build an NFA and watch subset construction run state by state — each DFA state annotated with the NFA subset it represents.</p>
+      <button class="btn btn-neon btn-sm" onclick="goToNFA()">Try the Converter →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ INPUT SCREEN ══════════ -->
+<div id="screen-input">
+  <div class="input-card">
+    <div>
+      <div class="back-btn" onclick="goHome()" style="display:inline-flex;margin-bottom:.6rem">↩ Back to Home</div>
+      <h2>Define Your NFA</h2>
+      <div style="font-size:.74rem;color:var(--txt3);margin-top:.22rem">Pick a preset or fill in the fields, then hit Build to see the conversion live.</div>
+    </div>
+    <div>
+      <div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin-bottom:.45rem">Quick Presets</div>
+      <div class="presets">
+        <button class="preset" onclick="loadPreset('simple')">🔵 Simple</button>
+        <button class="preset" onclick="loadPreset('endsab')">🟢 Ends ab</button>
+        <button class="preset" onclick="loadPreset('eps')">🟣 ε-NFA</button>
+        <button class="preset" onclick="loadPreset('complex')">🔴 Complex</button>
+      </div>
+    </div>
+    <div class="input-grid">
+      <div class="fg">
+        <label class="fl">States <span class="r">*</span></label>
+        <input type="text" id="inp-states" value="q0,q1,q2" placeholder="q0,q1,q2"/>
+        <div class="hint">Comma-separated</div>
+      </div>
+      <div class="fg">
+        <label class="fl">Alphabet <span class="r">*</span></label>
+        <input type="text" id="inp-alpha" value="a,b" placeholder="a,b"/>
+        <div class="hint">Use ε or 'eps' for epsilon</div>
+      </div>
+      <div class="fg">
+        <label class="fl">Start State <span class="r">*</span></label>
+        <input type="text" id="inp-start" value="q0" placeholder="q0"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Accept States <span class="r">*</span></label>
+        <input type="text" id="inp-accept" value="q2" placeholder="q2"/>
+        <div class="hint">Comma-separated</div>
+      </div>
+      <div class="fg full">
+        <label class="fl">Transitions <span class="r">*</span></label>
+        <textarea id="inp-trans" rows="6">q0,a,q0
+q0,a,q1
+q0,b,q0
+q1,b,q2</textarea>
+        <div class="hint">One per line: from, symbol, to &nbsp;·&nbsp; Use 'eps' for ε transitions</div>
+      </div>
+    </div>
+    <div id="err-box" style="display:none"></div>
+    <button class="btn btn-neon" style="width:100%" onclick="runConstruction()">▶ Build DFA — Watch It Happen</button>
+    <div style="font-size:.62rem;color:var(--txt3);text-align:center">Use ← → arrow keys or Space to step through the conversion</div>
+  </div>
+</div>
+
+<!-- ══════════ CONVERT SCREEN ══════════ -->
+<div id="screen-convert">
+  <div class="convert-main">
+
+    <!-- LEFT: NFA -->
+    <div class="half-panel nfa-col">
+      <div class="half-head">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--violet)"></div>
+          <span class="half-label">NFA</span>
+          <span class="half-tag">original</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.6rem">
+          <span style="font-size:.55rem;color:var(--txt3);font-family:'Space Mono',monospace">drag states & arcs · dbl-click resets</span>
+          <span class="half-info" id="nfa-info"></span>
+        </div>
+      </div>
+      <div class="svg-area"><svg id="svg-nfa" viewBox="0 0 660 230" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="tbl-strip">
+        <div class="tbl-head-strip">
+          <div class="dot" style="background:var(--violet)"></div>
+          NFA Transition Table
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--txt3);font-size:.55rem">· highlighted = active states at this step</span>
+        </div>
+        <div style="padding:0 .65rem .5rem" id="nfa-tbl-wrap"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: DFA -->
+    <div class="half-panel dfa-col">
+      <div class="half-head">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--neon)"></div>
+          <span class="half-label">DFA</span>
+          <span class="half-tag">being built</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.6rem">
+          <span style="font-size:.55rem;color:var(--txt3);font-family:'Space Mono',monospace">drag states & arcs · dbl-click resets</span>
+          <span class="half-info" id="dfa-info"></span>
+        </div>
+      </div>
+      <div class="svg-area"><svg id="svg-dfa" viewBox="0 0 660 230" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="tbl-strip">
+        <div class="tbl-head-strip">
+          <div class="dot" style="background:var(--neon)"></div>
+          DFA Transition Table
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--txt3);font-size:.55rem">· rows appear as states are discovered · highlighted cell = current computation</span>
+        </div>
+        <div style="padding:0 .65rem .5rem" id="dfa-tbl-wrap"></div>
+      </div>
+    </div>
+
+  </div><!-- /convert-main -->
+
+  <!-- NARRATOR BAR -->
+  <div class="narrator" id="narrator">
+    <div class="nar-icon" id="nar-icon">💡</div>
+    <div class="nar-body">
+      <span class="nar-badge eb-idle" id="nar-badge">WAITING</span>
+      <div class="nar-text" id="nar-text">Run the construction to begin.</div>
+      <div class="nar-formula" id="nar-formula" style="display:none"></div>
+    </div>
+    <div class="nar-controls">
+      <div class="nav-row">
+        <button class="btn btn-ghost btn-sm" id="btn-prev" onclick="nav(-1)" disabled>← Prev</button>
+        <button class="btn btn-ghost btn-sm" id="btn-next" onclick="nav(1)" disabled>Next →</button>
+        <button class="btn btn-neon btn-sm" id="btn-play" onclick="togglePlay()">▶</button>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-track"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+        <span class="step-ctr" id="step-ctr">0/0</span>
+      </div>
+      <div style="display:flex;gap:.6rem;align-items:center">
+        <div class="back-btn" onclick="goBack()">↩ Edit NFA</div>
+        <div class="back-btn" id="btn-minimize" onclick="runMinimization()" style="color:var(--violet);display:none">⊕ Minimize DFA</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /screen-convert -->
+
+<!-- ══════════ STRING TESTER SCREEN ══════════ -->
+<div id="screen-tester">
+  <div class="tester-wrap">
+    <!-- Top input bar -->
+    <div class="tester-top">
+      <div class="tester-input-area">
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.2rem">
+          <div class="back-btn" onclick="goHome()" style="display:inline-flex">← Home</div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.1em;color:var(--neon2)">String Acceptor</span>
+          <span style="font-size:.58rem;color:var(--txt3)">· define a DFA, enter a string, watch it run</span>
+        </div>
+        <div class="tester-input-row">
+          <div class="fg" style="flex:1.2">
+            <label class="fl">States <span class="r">*</span></label>
+            <input type="text" id="t-states" value="q0,q1,q2" placeholder="q0,q1,q2"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Alphabet <span class="r">*</span></label>
+            <input type="text" id="t-alpha" value="a,b" placeholder="a,b"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Start <span class="r">*</span></label>
+            <input type="text" id="t-start" value="q0" placeholder="q0"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Accept <span class="r">*</span></label>
+            <input type="text" id="t-accept" value="q2" placeholder="q2"/>
+          </div>
+        </div>
+        <div class="tester-input-row">
+          <div class="fg" style="flex:2">
+            <label class="fl">Transitions <span class="r">*</span></label>
+            <input type="text" id="t-trans" value="q0,a,q1 | q1,b,q2 | q2,a,q2 | q2,b,q1 | q0,b,q0 | q1,a,q1" placeholder="q0,a,q1 | q1,b,q2 (pipe-separated or newline)"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Test String <span class="r">*</span></label>
+            <input type="text" id="t-string" value="ab" placeholder="e.g. aab"/>
+          </div>
+          <button class="btn btn-neon btn-sm" onclick="runTester()" style="flex-shrink:0;align-self:flex-end">▶ Run</button>
+        </div>
+        <div id="t-err" style="display:none"></div>
+        <!-- string char display -->
+        <div id="t-chars" class="string-chars"></div>
+      </div>
+      <div class="tester-controls-bar">
+        <div class="nav-row">
+          <button class="btn btn-ghost btn-sm" id="t-prev" onclick="tNav(-1)" disabled>← Prev</button>
+          <button class="btn btn-ghost btn-sm" id="t-next" onclick="tNav(1)" disabled>Next →</button>
+          <button class="btn btn-neon btn-sm" id="t-play" onclick="tTogglePlay()">▶</button>
+        </div>
+        <div class="prog-wrap">
+          <div class="prog-track"><div class="prog-fill" id="t-prog" style="width:0%"></div></div>
+          <span class="step-ctr" id="t-ctr">0/0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Body: trace + graph -->
+    <div class="tester-body">
+      <div class="tester-panel">
+        <div class="tester-panel-head">
+          <span class="tester-panel-label">Trace Log</span>
+          <span id="t-panel-info" style="font-size:.6rem;color:var(--txt3);font-family:'Space Mono',monospace"></span>
+        </div>
+        <div class="trace-strip" id="t-trace"></div>
+      </div>
+      <div class="tester-panel" style="background:var(--ink)">
+        <div class="tester-panel-head">
+          <span class="tester-panel-label" style="color:var(--neon)">DFA Graph</span>
+          <span style="font-size:.58rem;color:var(--txt3)">active state pulses</span>
+        </div>
+        <div class="tester-svg-area"><svg id="svg-tester" viewBox="0 0 660 300" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div class="verdict-bar v-idle" id="t-verdict">⬡ &nbsp;Enter a string and press Run</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ DFA MINIMIZATION SCREEN ══════════ -->
+<div id="screen-minimize">
+  <div class="min-main">
+    <!-- LEFT: Original DFA -->
+    <div class="min-panel">
+      <div class="min-panel-head">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--neon)"></div>
+          <span class="min-panel-label" style="color:var(--neon)">DFA (before minimization)</span>
+        </div>
+        <span id="min-orig-info" style="font-size:.6rem;color:var(--txt3);font-family:'Space Mono',monospace"></span>
+      </div>
+      <div class="min-svg-area"><svg id="svg-min-orig" viewBox="0 0 660 220" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="min-tbl-strip">
+        <div class="tbl-head-strip">
+          <div class="dot" style="background:var(--neon)"></div>
+          Distinguishability Table (Table-Filling)
+          <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--txt3);font-size:.55rem">· ✗ = distinguishable · ≡ = equivalent</span>
+        </div>
+        <div style="padding:0 .65rem .5rem" id="min-pair-wrap"></div>
+      </div>
+    </div>
+    <!-- RIGHT: Minimized DFA -->
+    <div class="min-panel">
+      <div class="min-panel-head">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--violet)"></div>
+          <span class="min-panel-label" style="color:var(--violet)">Minimized DFA</span>
+        </div>
+        <span id="min-result-info" style="font-size:.6rem;color:var(--txt3);font-family:'Space Mono',monospace"></span>
+      </div>
+      <div class="min-svg-area"><svg id="svg-min-result" viewBox="0 0 660 220" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="min-tbl-strip">
+        <div class="tbl-head-strip">
+          <div class="dot" style="background:var(--violet)"></div>
+          Equivalence Classes
+        </div>
+        <div style="padding:0 .65rem .5rem" id="min-classes-wrap"></div>
+      </div>
+    </div>
+  </div>
+  <!-- Narrator -->
+  <div class="narrator" id="min-narrator">
+    <div class="nar-icon" id="min-nar-icon">🔬</div>
+    <div class="nar-body">
+      <span class="nar-badge eb-idle" id="min-nar-badge">WAITING</span>
+      <div class="nar-text" id="min-nar-text">Step through the table-filling algorithm.</div>
+      <div class="nar-formula" id="min-nar-formula" style="display:none"></div>
+    </div>
+    <div class="nar-controls">
+      <div class="nav-row">
+        <button class="btn btn-ghost btn-sm" id="min-prev" onclick="minNav(-1)" disabled>← Prev</button>
+        <button class="btn btn-ghost btn-sm" id="min-next" onclick="minNav(1)" disabled>Next →</button>
+        <button class="btn btn-neon btn-sm" id="min-play" onclick="minTogglePlay()">▶</button>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-track"><div class="prog-fill" id="min-prog" style="width:0%"></div></div>
+        <span class="step-ctr" id="min-ctr">0/0</span>
+      </div>
+      <div class="back-btn" onclick="goBackFromMin()">↩ Back to DFA</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════ UTILS ════════════════════════════ */
+const G=id=>document.getElementById(id);
+function toggleTheme(){
+  const l=document.documentElement.classList.toggle('light');
+  G('theme-toggle').textContent=l?'🌞':'🌙';
+}
+function goHome(){
+  if(playId){clearInterval(playId);playId=null;}
+  if(tPlayId){clearInterval(tPlayId);tPlayId=null;}
+  if(minPlayId){clearInterval(minPlayId);minPlayId=null;}
+  G('btn-play').textContent='▶';
+  G('screen-convert').style.display='none';
+  G('screen-input').style.display='none';
+  G('screen-theory').style.display='none';
+  G('screen-tester').style.display='none';
+  G('screen-minimize').style.display='none';
+  G('screen-home').style.display='flex';
+  G('hdr-chip').style.display='none';
+}
+function goToNFA(){
+  G('screen-home').style.display='none';
+  G('screen-theory').style.display='none';
+  G('screen-convert').style.display='none';
+  G('screen-tester').style.display='none';
+  G('screen-minimize').style.display='none';
+  G('screen-input').style.display='flex';
+}
+function goToTheory(){
+  G('screen-home').style.display='none';
+  G('screen-input').style.display='none';
+  G('screen-convert').style.display='none';
+  G('screen-tester').style.display='none';
+  G('screen-minimize').style.display='none';
+  G('screen-theory').style.display='flex';
+}
+
+/* ════════════════════════════ STATE ════════════════════════════ */
+let NFA={},DFA={},steps=[],cur=-1,playId=null,dfaAlpha=[];
+
+/* ════════════════════════════ PRESETS ════════════════════════════ */
+const PRESETS={
+  simple:{states:'q0,q1,q2',alpha:'a,b',start:'q0',accept:'q2',
+    trans:'q0,a,q0\nq0,a,q1\nq0,b,q0\nq1,b,q2'},
+  endsab:{states:'q0,q1,q2',alpha:'a,b',start:'q0',accept:'q2',
+    trans:'q0,a,q0\nq0,b,q0\nq0,a,q1\nq1,b,q2\nq2,a,q0\nq2,b,q0'},
+  eps:{states:'q0,q1,q2,q3',alpha:'a,b,ε',start:'q0',accept:'q3',
+    trans:'q0,ε,q1\nq0,ε,q2\nq1,a,q3\nq2,b,q3\nq3,a,q3\nq3,b,q3'},
+  complex:{states:'q0,q1,q2,q3,q4',alpha:'a,b',start:'q0',accept:'q3,q4',
+    trans:'q0,a,q0\nq0,b,q0\nq0,a,q1\nq1,a,q2\nq2,b,q3\nq0,b,q4\nq4,a,q4'}
+};
+function loadPreset(k){
+  const p=PRESETS[k];
+  G('inp-states').value=p.states;G('inp-alpha').value=p.alpha;
+  G('inp-start').value=p.start;G('inp-accept').value=p.accept;
+  G('inp-trans').value=p.trans;G('err-box').style.display='none';
+}
+
+function normalizeEps(s){return s==='eps'?'ε':s;}
+
+/* ════════════════════════════ PARSE ════════════════════════════ */
+function parseNFA(){
+  const states=G('inp-states').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const alpha=G('inp-alpha').value.split(',').map(s=>normalizeEps(s.trim())).filter(Boolean);
+  const start=G('inp-start').value.trim();
+  const accept=G('inp-accept').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const lines=G('inp-trans').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!states.length)throw new Error('No states defined');
+  if(!alpha.length)throw new Error('No alphabet defined');
+  if(!start)throw new Error('No start state');
+  if(!states.includes(start))throw new Error(`Start state "${start}" not in states`);
+  const delta={};for(const s of states)delta[s]={};
+  for(const ln of lines){
+    const p=ln.split(',').map(s=>s.trim());
+    if(p.length<3)throw new Error(`Bad transition: "${ln}"`);
+    const[fr,symRaw,to]=p;
+    const sym=normalizeEps(symRaw);
+    if(!delta[fr])delta[fr]={};
+    if(!delta[fr][sym])delta[fr][sym]=[];
+    if(!delta[fr][sym].includes(to))delta[fr][sym].push(to);
+  }
+  return{states,alpha,start,accept,delta};
+}
+
+/* ════════════════════════════ SUBSET CONSTRUCTION ════════════════════════════ */
+function epsClos(set,delta){
+  const cl=new Set(set),stk=[...set];
+  while(stk.length){const s=stk.pop();for(const t of(delta[s]&&delta[s]['ε'])||[]){if(!cl.has(t)){cl.add(t);stk.push(t);}}}
+  return[...cl].sort();
+}
+function move(set,sym,delta){
+  const r=new Set();
+  for(const s of set)for(const t of(delta[s]&&delta[s][sym])||[])r.add(t);
+  return[...r].sort();
+}
+function setKey(arr){return arr.join('§')}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+
+function buildSteps(nfa){
+  const wAlpha=nfa.alpha.filter(a=>a!=='ε');
+  const dfaStates={},dfaTrans={},queue=[],steps=[];
+  const s0=epsClos([nfa.start],nfa.delta);
+  const k0=setKey(s0);
+  dfaStates[k0]={nfaSet:s0,name:'D0',isStart:true,isAccept:s0.some(s=>nfa.accept.includes(s))};
+  queue.push(k0);
+
+  steps.push({type:'init',icon:'🚀',label:'Start',
+    text:`ε-closure({<span class="hn">${nfa.start}</span>}) = <span class="hset">{${s0.join(', ')}}</span> → first DFA state <span class="hd">D0</span>`,
+    formula:`ε-closure({${nfa.start}}) = {${s0.join(', ')}}`,
+    newKey:k0,fromKey:null,toKey:null,sym:null,activeNfa:s0,activeEdge:null,
+    snap:{states:clone(dfaStates),trans:clone(dfaTrans)},cellKey:null,cellSym:null
+  });
+
+  let cnt=1;
+  while(queue.length){
+    const key=queue.shift();const{nfaSet}=dfaStates[key];dfaTrans[key]={};
+    for(const sym of wAlpha){
+      const moved=move(nfaSet,sym,nfa.delta);
+      const closed=epsClos(moved,nfa.delta);
+      const nk=setKey(closed);
+      if(!closed.length){
+        dfaTrans[key][sym]='∅';
+        steps.push({type:'dead',icon:'✗',label:'Dead State',
+          text:`<span class="hd">${dfaStates[key].name}</span> on <span class="hs">'${sym}'</span>: nothing reachable → <span class="hx">∅</span>`,
+          formula:`move({${nfaSet.join(',')}}, '${sym}') = {}  →  ∅`,
+          fromKey:key,toKey:'∅',sym,newKey:null,activeNfa:nfaSet,activeEdge:`${key}→∅`,
+          snap:{states:clone(dfaStates),trans:clone(dfaTrans)},cellKey:key,cellSym:sym
+        });
+      } else if(!dfaStates[nk]){
+        dfaStates[nk]={nfaSet:closed,name:`D${cnt++}`,isStart:false,isAccept:closed.some(s=>nfa.accept.includes(s))};
+        queue.push(nk);dfaTrans[key][sym]=nk;
+        const isAcc=dfaStates[nk].isAccept;
+        steps.push({type:'new',icon:'✨',label:'New State',
+          text:`<span class="hd">${dfaStates[key].name}</span> on <span class="hs">'${sym}'</span> → <span class="hset">{${closed.join(', ')}}</span> = <span class="hd">${dfaStates[nk].name}</span>${isAcc?' <span class="ca">★</span>':''}`,
+          formula:`move({${nfaSet.join(',')}}, '${sym}') = {${moved.join(',')}}  →  ε-closure = {${closed.join(',')}}`,
+          fromKey:key,toKey:nk,sym,newKey:nk,activeNfa:closed,activeEdge:`${key}→${nk}`,
+          snap:{states:clone(dfaStates),trans:clone(dfaTrans)},cellKey:key,cellSym:sym
+        });
+      } else {
+        dfaTrans[key][sym]=nk;
+        steps.push({type:'trans',icon:'→',label:'Transition',
+          text:`<span class="hd">${dfaStates[key].name}</span> on <span class="hs">'${sym}'</span> → <span class="hset">{${closed.join(', ')}}</span> = <span class="hd">${dfaStates[nk].name}</span> (exists)`,
+          formula:`move({${nfaSet.join(',')}}, '${sym}') → ε-closure = {${closed.join(',')}} = ${dfaStates[nk].name} ✓`,
+          fromKey:key,toKey:nk,sym,newKey:null,activeNfa:closed,activeEdge:`${key}→${nk}`,
+          snap:{states:clone(dfaStates),trans:clone(dfaTrans)},cellKey:key,cellSym:sym
+        });
+      }
+    }
+  }
+  const accNames=Object.values(dfaStates).filter(d=>d.isAccept).map(d=>d.name).join(', ');
+  steps.push({type:'done',icon:'✅',label:'Complete',
+    text:`Done! <strong>${cnt} DFA states</strong>. Accept: <span class="ca">${accNames||'none'}</span>. The DFA accepts the same language as the NFA.`,
+    formula:`Every NFA has an equivalent DFA. Subset construction proves it.`,
+    fromKey:null,toKey:null,sym:null,newKey:null,activeNfa:[],activeEdge:null,
+    snap:{states:clone(dfaStates),trans:clone(dfaTrans)},cellKey:null,cellSym:null
+  });
+  return{dfaStates,dfaTrans,wAlpha,steps};
+}
+
+/* ════════════════════════════ MAIN RUN ════════════════════════════ */
+function runConstruction(){
+  G('err-box').style.display='none';
+  try{NFA=parseNFA();}
+  catch(e){G('err-box').style.display='block';G('err-box').innerHTML=`<div class="err">⚠ ${e.message}</div>`;return;}
+  const r=buildSteps(NFA);DFA=r;steps=r.steps;cur=-1;
+  dfaAlpha=r.wAlpha;
+  // Clear any user-dragged edge/node positions from a previous run
+  Object.keys(edgeCPOverrides).forEach(k=>delete edgeCPOverrides[k]);
+  Object.keys(nodePosOverrides).forEach(k=>delete nodePosOverrides[k]);
+  G('screen-home').style.display='none';
+  G('screen-theory').style.display='none';
+  G('screen-tester').style.display='none';
+  G('screen-minimize').style.display='none';
+  G('screen-input').style.display='none';
+  G('screen-convert').style.display='flex';
+  G('hdr-chip').style.display='inline-flex';
+  G('hdr-chip').textContent=`${NFA.states.length} NFA → ${Object.keys(r.dfaStates).length} DFA states`;
+  G('nfa-info').textContent=`${NFA.states.length} states · Σ={${NFA.alpha.join(',')}}`;
+  G('btn-minimize').style.display='flex';
+  renderNFA();
+  buildNFATable();
+  initDFATable();
+  gotoStep(0);
+}
+function goBack(){
+  if(playId){clearInterval(playId);playId=null;}
+  G('btn-play').textContent='▶';
+  G('screen-convert').style.display='none';
+  G('screen-input').style.display='flex';
+  G('hdr-chip').style.display='none';
+}
+
+/* ════════════════════════════ NFA TABLE ════════════════════════════ */
+function buildNFATable(){
+  const{states,alpha,accept,delta,start}=NFA;
+  const workAlpha=alpha.filter(a=>a!=='ε');
+  const hasEps=alpha.includes('ε');
+  const allAlpha=hasEps?[...workAlpha,'ε']:workAlpha;
+  let h=`<table class="atbl"><thead><tr><th>State</th>`;
+  for(const a of allAlpha)h+=`<th>${a}</th>`;
+  h+=`<th>✓</th></tr></thead><tbody>`;
+  for(const s of states){
+    const isAcc=accept.includes(s),isStart=s===start;
+    h+=`<tr data-s="${s}"><td class="cn2">${isStart?'→ ':''}${isAcc?'* ':''}${s}</td>`;
+    for(const a of allAlpha){
+      const tgts=(delta[s]&&delta[s][a])||[];
+      h+=`<td style="color:${tgts.length?'var(--txt)':'var(--txt3)'}">${tgts.length?'{'+tgts.join(',')+'}'  :'∅'}</td>`;
+    }
+    h+=`<td class="ca">${isAcc?'★':''}</td></tr>`;
+  }
+  h+=`</tbody></table>`;
+  G('nfa-tbl-wrap').innerHTML=h;
+  fixStickyThead(G('nfa-tbl-wrap'));
+}
+
+function hlNFARows(nfaSet){
+  document.querySelectorAll('#nfa-tbl-wrap tr[data-s]').forEach(r=>{
+    const on=nfaSet&&nfaSet.includes(r.dataset.s);
+    r.classList.toggle('hl-nfa',on);
+    if(on)r.scrollIntoView({block:'nearest',behavior:'smooth'});
+  });
+}
+
+/* ════════════════════════════ DFA TABLE (LIVE) ════════════════════════════ */
+function initDFATable(){
+  let h=`<table class="atbl" id="dfa-atbl"><thead><tr><th>State</th><th>Subset</th>`;
+  for(const a of dfaAlpha)h+=`<th>${a}</th>`;
+  h+=`<th>✓</th></tr></thead><tbody id="dfa-tbody"></tbody></table>`;
+  G('dfa-tbl-wrap').innerHTML=h;
+  fixStickyThead(G('dfa-tbl-wrap'));
+}
+
+function fixStickyThead(wrapEl){
+  // Measure the .tbl-head-strip label above this wrapper and offset thead accordingly
+  requestAnimationFrame(()=>{
+    const strip=wrapEl.closest('.tbl-strip');
+    if(!strip)return;
+    const label=strip.querySelector('.tbl-head-strip');
+    if(!label)return;
+    const labelH=label.getBoundingClientRect().height;
+    const thead=wrapEl.querySelector('thead');
+    if(thead)thead.style.top=Math.round(labelH)+'px';
+  });
+}
+
+function updateDFATable(snap,activeKey,activeSym){
+  const{states:ds,trans:dt}=snap;
+  const tbody=G('dfa-tbody');if(!tbody)return;
+  // track existing rows
+  const existing=new Set([...tbody.querySelectorAll('tr[data-k]')].map(r=>r.dataset.k));
+
+  Object.entries(ds).forEach(([k,info])=>{
+    const ek=encodeKey(k);
+    if(!existing.has(ek)){
+      // create the row
+      const tr=document.createElement('tr');
+      tr.dataset.k=ek;tr.className='row-enter';
+      // name
+      const tdN=document.createElement('td');tdN.className='cn';tdN.textContent=info.name;tr.appendChild(tdN);
+      // subset
+      const tdS=document.createElement('td');
+      tdS.style.cssText='color:var(--neon2);font-size:.59rem';
+      tdS.textContent='{'+info.nfaSet.join(',')+'}';tr.appendChild(tdS);
+      // symbol cells — pending
+      for(const a of dfaAlpha){
+        const td=document.createElement('td');td.dataset.sym=a;td.className='c-pend';td.textContent='?';
+        tr.appendChild(td);
+      }
+      // accept
+      const tdA=document.createElement('td');tdA.className='ca';tdA.textContent=info.isAccept?'★':'';
+      tr.appendChild(tdA);
+      tbody.appendChild(tr);
+    }
+    // fill known transition cells
+    const row=tbody.querySelector(`tr[data-k="${ek}"]`);if(!row)return;
+    if(dt[k]){
+      for(const a of dfaAlpha){
+        const td=row.querySelector(`td[data-sym="${a}"]`);if(!td)continue;
+        const raw=dt[k][a];
+        if(raw!==undefined){
+          const display=raw==='∅'?'∅':(ds[raw]?ds[raw].name:raw);
+          if(td.textContent!==display||td.classList.contains('c-pend')){
+            td.textContent=display;
+            td.className=raw==='∅'?'cd cell-new':'cell-new';
+            setTimeout(()=>{
+              if(td.className.includes('cell-new'))td.classList.remove('cell-new');
+            },600);
+          }
+        }
+      }
+    }
+  });
+
+  // clear all highlights
+  tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('hl-dfa'));
+  tbody.querySelectorAll('td').forEach(td=>td.classList.remove('cell-hot'));
+  // apply new highlights
+  if(activeKey){
+    const ek=encodeKey(activeKey);
+    const row=tbody.querySelector(`tr[data-k="${ek}"]`);
+    if(row){
+      row.classList.add('hl-dfa');
+      if(activeSym){
+        const td=row.querySelector(`td[data-sym="${activeSym}"]`);
+        if(td){td.classList.add('cell-hot');}
+      }
+      row.scrollIntoView({block:'nearest',behavior:'smooth'});
+    }
+  }
+  // update DFA info count
+  G('dfa-info').textContent=`${Object.keys(ds).length} state${Object.keys(ds).length!==1?'s':''} found`;
+}
+
+function encodeKey(k){return k.replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+
+/* ════════════════════════════ NARRATOR ════════════════════════════ */
+const EBMAP={init:'eb-init',new:'eb-new',trans:'eb-trans',dead:'eb-dead',done:'eb-done',idle:'eb-idle'};
+function updateNarrator(s){
+  G('narrator').className=`narrator t-${s.type}`;
+  G('nar-icon').textContent=s.icon||'💡';
+  const b=G('nar-badge');b.className=`nar-badge ${EBMAP[s.type]||'eb-idle'}`;b.textContent=s.label||'Step';
+  const t=G('nar-text');t.innerHTML=s.text||'';
+  t.style.animation='none';void t.offsetWidth;t.style.animation='fadeIn .3s ease both';
+  if(s.formula){G('nar-formula').style.display='block';G('nar-formula').textContent=s.formula;}
+  else G('nar-formula').style.display='none';
+}
+
+/* ════════════════════════════ NAVIGATION ════════════════════════════ */
+function gotoStep(i){
+  if(i<0||i>=steps.length)return;
+  cur=i;const s=steps[i];
+  const pct=steps.length>1?(i/(steps.length-1)*100):100;
+  G('prog').style.width=pct+'%';
+  G('step-ctr').textContent=`${i+1}/${steps.length}`;
+  G('btn-prev').disabled=i===0;
+  G('btn-next').disabled=i===steps.length-1;
+  updateNarrator(s);
+  updateDFATable(s.snap,s.fromKey,s.cellSym);
+  hlNFARows(s.activeNfa||[]);
+  renderDFAStep(s);
+}
+function nav(dir){gotoStep(cur+dir);}
+function togglePlay(){
+  if(playId){clearInterval(playId);playId=null;G('btn-play').textContent='▶';}
+  else{
+    G('btn-play').textContent='⏸';
+    playId=setInterval(()=>{
+      if(cur>=steps.length-1){clearInterval(playId);playId=null;G('btn-play').textContent='▶';return;}
+      nav(1);
+    },1500);
+  }
+}
+
+/* ════════════════════════════ NFA SVG ════════════════════════════ */
+function renderNFA(){
+  const{states,start,accept,delta}=NFA;
+  const W=660,H=225,cx=W/2,cy=H/2,n=states.length;
+  const R=n<=1?0:Math.min(88,Math.min(cx-55,cy-38));
+  const pos={};
+  states.forEach((s,i)=>{const a=(2*Math.PI*i/n)-Math.PI/2;pos[s]={x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)};});
+  if(n===1)pos[states[0]]={x:cx,y:cy};
+  applyNodeOverrides('svg-nfa', pos);
+  let h=svgOpen('an','#a78bfa',W,H);
+  const sp=pos[start];
+  h+=`<line x1="${sp.x-50}" y1="${sp.y}" x2="${sp.x-26}" y2="${sp.y}" stroke="#00bfff" stroke-width="1.8" marker-end="url(#start-an)"/>`;
+  const em={};
+  for(const[fr,syms]of Object.entries(delta))
+    for(const[sym,tgts]of Object.entries(syms))
+      for(const to of tgts){const k=`${fr}→${to}`;if(!em[k])em[k]=[];em[k].push(sym);}
+  for(const[k,syms]of Object.entries(em)){
+    const[fr,to]=k.split('→');if(!pos[fr]||!pos[to])continue;
+    const hasReverse=!!em[`${to}→${fr}`];
+    h+=drawEdge(pos[fr],pos[to],syms.join(','),fr===to,'#3a4580','an',false,hasReverse?-1:0,0,k,'svg-nfa');
+  }
+  for(const s of states)h+=stateCirc(pos[s].x,pos[s].y,s,accept.includes(s),false,'nfa',s,'svg-nfa');
+  h+=`</svg>`;setSVG('svg-nfa',h,W,H);
+}
+
+/* ════════════════════════════ DFA LAYOUT HELPERS ════════════════════════════ */
+const NODE_R = 28;        // node radius — used for spacing math
+const MIN_DIST = NODE_R * 2 + 22;  // minimum centre-to-centre gap (no overlap)
+
+/* ════════════════════════════ DRAG STATE ════════════════════════════ */
+// Edge control-point overrides: svgId → { edgeKey → {cpx, cpy} }
+const edgeCPOverrides = {};
+// Node position overrides: svgId → { stateKey → {x, y} }
+const nodePosOverrides = {};
+// Active drag states (only one active at a time)
+let _edgeDrag = null;
+let _nodeDrag = null; // { svgId, stateKey, ox, oy }
+
+// Apply any user-dragged node positions into a computed pos map (mutates pos)
+function applyNodeOverrides(svgId, pos){
+  const ovr = nodePosOverrides[svgId];
+  if(!ovr) return;
+  for(const [k,p] of Object.entries(ovr)){
+    if(pos[k]) { pos[k].x = p.x; pos[k].y = p.y; }
+  }
+}
+
+function dfaCanvasSize(n) {
+  // Canvas grows with state count so nodes always have room
+  if (n <= 3)  return { W: 660, H: 260 };
+  if (n <= 5)  return { W: 760, H: 300 };
+  if (n <= 8)  return { W: 900, H: 360 };
+  if (n <= 12) return { W: 1050, H: 420 };
+  return           { W: 1200, H: 500 };
+}
+
+function computeLayeredLayout(keys, ds, dt, W, H) {
+  /* ── 1. BFS layers ── */
+  const startKey = keys.find(k => ds[k] && ds[k].isStart) || keys[0];
+  const layer = {}, visited = new Set();
+  const bfsQ = [[startKey, 0]];
+  layer[startKey] = 0; visited.add(startKey);
+  while (bfsQ.length) {
+    const [cur, lv] = bfsQ.shift();
+    if (!dt[cur]) continue;
+    for (const to of Object.values(dt[cur])) {
+      if (to && to !== '∅' && !visited.has(to)) {
+        visited.add(to); layer[to] = lv + 1; bfsQ.push([to, lv + 1]);
+      }
+    }
+  }
+  const maxL = Math.max(0, ...Object.values(layer));
+  keys.forEach(k => { if (layer[k] === undefined) layer[k] = maxL + 1; });
+
+  /* ── 2. Group by layer ── */
+  const byLayer = {};
+  keys.forEach(k => { const l = layer[k]; (byLayer[l] = byLayer[l] || []).push(k); });
+  const numLayers = Math.max(...Object.keys(byLayer).map(Number)) + 1;
+  const maxPerLayer = Math.max(...Object.values(byLayer).map(a => a.length));
+
+  /* ── 3. Pick orientation ── */
+  // Use left-to-right when chain is longer than it is wide
+  const useLR = numLayers >= maxPerLayer;
+
+  /* ── 4. Compute required canvas & spacing ── */
+  const PAD = NODE_R + 18;
+  const pos = {};
+
+  if (useLR) {
+    // columns = layers, rows = nodes per layer
+    const usableW = W - PAD * 2;
+    const usableH = H - PAD * 2;
+    const colStep = numLayers <= 1 ? 0 : Math.max(MIN_DIST, usableW / (numLayers - 1 || 1));
+    Object.entries(byLayer).forEach(([lStr, ks]) => {
+      const l = Number(lStr);
+      const rowStep = ks.length <= 1 ? 0 : Math.max(MIN_DIST, usableH / (ks.length - 1 || 1));
+      const totalH = (ks.length - 1) * rowStep;
+      ks.forEach((k, i) => {
+        pos[k] = {
+          x: PAD + l * colStep,
+          y: (H - totalH) / 2 + i * rowStep
+        };
+      });
+    });
+  } else {
+    // rows = layers, columns = nodes per layer
+    const usableW = W - PAD * 2;
+    const usableH = H - PAD * 2;
+    const rowStep = numLayers <= 1 ? 0 : Math.max(MIN_DIST, usableH / (numLayers - 1 || 1));
+    Object.entries(byLayer).forEach(([lStr, ks]) => {
+      const l = Number(lStr);
+      const colStep = ks.length <= 1 ? 0 : Math.max(MIN_DIST, usableW / (ks.length - 1 || 1));
+      const totalW = (ks.length - 1) * colStep;
+      ks.forEach((k, i) => {
+        pos[k] = {
+          x: (W - totalW) / 2 + i * colStep,
+          y: PAD + l * rowStep
+        };
+      });
+    });
+  }
+
+  /* ── 5. Force-separation pass — push any still-overlapping nodes apart ── */
+  // Run several relaxation iterations to guarantee MIN_DIST between every pair
+  for (let iter = 0; iter < 60; iter++) {
+    let moved = false;
+    const ks = Object.keys(pos);
+    for (let a = 0; a < ks.length; a++) {
+      for (let b = a + 1; b < ks.length; b++) {
+        const pa = pos[ks[a]], pb = pos[ks[b]];
+        const dx = pb.x - pa.x, dy = pb.y - pa.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        if (dist < MIN_DIST) {
+          const push = (MIN_DIST - dist) / 2 + 1;
+          const nx = dx / dist, ny = dy / dist;
+          pa.x -= nx * push; pa.y -= ny * push;
+          pb.x += nx * push; pb.y += ny * push;
+          moved = true;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+
+  /* ── 6. Re-centre after force separation ── */
+  const allX = Object.values(pos).map(p => p.x);
+  const allY = Object.values(pos).map(p => p.y);
+  const minX = Math.min(...allX), maxX = Math.max(...allX);
+  const minY = Math.min(...allY), maxY = Math.max(...allY);
+  const shiftX = (W - (minX + maxX)) / 2;
+  const shiftY = (H - (minY + maxY)) / 2;
+  Object.values(pos).forEach(p => { p.x += shiftX; p.y += shiftY; });
+
+  return pos;
+}
+
+/* ════════════════════════════ DFA SVG ════════════════════════════ */
+function renderDFAStep(step){
+  if(!step||!step.snap)return;
+  const{states:ds,trans:dt}=step.snap;
+  const keys=Object.keys(ds);if(!keys.length)return;
+  const n = keys.length;
+  const hasDead = Object.values(dt).some(t=>Object.values(t).includes('∅'));
+  const { W, H } = dfaCanvasSize(n + (hasDead ? 1 : 0));
+
+  // Layered layout with overlap prevention
+  const pos = computeLayeredLayout(keys, ds, dt, W, H);
+
+  // Place ∅ sink at bottom-right, away from the main cluster
+  pos['∅'] = { x: W - NODE_R - 10, y: H - NODE_R - 10 };
+
+  // Apply any user-dragged node positions
+  applyNodeOverrides('svg-dfa', pos);
+
+  let h=svgOpen('ad','#00e5a0',W,H);
+  const sk=keys.find(k=>ds[k].isStart);
+  if(sk&&pos[sk]){
+    const sp=pos[sk];
+    h+=`<line x1="${sp.x-54}" y1="${sp.y}" x2="${sp.x-NODE_R}" y2="${sp.y}" stroke="#00bfff" stroke-width="1.8" marker-end="url(#start-ad)"/>`;
+  }
+
+  // Build edge map
+  const em={};
+  for(const[fr,syms]of Object.entries(dt))
+    for(const[sym,to]of Object.entries(syms)){const k=`${fr}→${to}`;if(!em[k])em[k]=[];em[k].push(sym);}
+
+  // Detect near-parallel edges: edges whose midpoints are close together get extra offset
+  // Build a list of edge midpoint vectors to check collisions
+  const edgeEntries = Object.entries(em).filter(([k])=>{
+    const[fr,to]=k.split('→');return pos[fr]&&(pos[to]||pos['∅'])&&fr!==to;
+  });
+
+  // For each edge, compute its geometric midpoint (unperturbed)
+  function edgeMid(fr, to) {
+    const p1=pos[fr], p2=pos[to]||pos['∅'];
+    if(!p1||!p2) return null;
+    const dx=p2.x-p1.x,dy=p2.y-p1.y,dist=Math.sqrt(dx*dx+dy*dy)||1;
+    const Rn=NODE_R+1,ux=dx/dist,uy=dy/dist;
+    const x1=p1.x+ux*Rn,y1=p1.y+uy*Rn,x2=p2.x-ux*Rn,y2=p2.y-uy*Rn;
+    return {mx:(x1+x2)/2, my:(y1+y2)/2, ux, uy, dist};
+  }
+
+  // Assign extra offsets to edges that are geometrically too close (parallel / crossing)
+  const extraOffsets = {};
+  for(let i=0;i<edgeEntries.length;i++){
+    const[ki]=edgeEntries[i];
+    const[fri,toi]=ki.split('→');
+    const mi=edgeMid(fri,toi);
+    if(!mi) continue;
+    for(let j=i+1;j<edgeEntries.length;j++){
+      const[kj]=edgeEntries[j];
+      const[frj,toj]=kj.split('→');
+      // Skip bidirectional pair — already handled by curveSide
+      if((fri===toj&&toi===frj)) continue;
+      const mj=edgeMid(frj,toj);
+      if(!mj) continue;
+      // Check if midpoints are within threshold
+      const mdist=Math.sqrt((mi.mx-mj.mx)**2+(mi.my-mj.my)**2);
+      // Also check if directions are parallel (dot product of unit vectors ≈ ±1)
+      const dot=Math.abs(mi.ux*mj.ux+mi.uy*mj.uy);
+      if(mdist < 70 && dot > 0.7){
+        // These two edges are near-parallel and close — give the later one extra curve
+        extraOffsets[kj]=(extraOffsets[kj]||0)+18;
+      }
+    }
+  }
+
+  for(const[k,syms]of Object.entries(em)){
+    const[fr,to]=k.split('→');const p1=pos[fr],p2=pos[to]||pos['∅'];if(!p1||!p2)continue;
+    const isAct=step.activeEdge===k;
+    const hasReverse=!!em[`${to}→${fr}`];
+    h+=drawEdge(p1,p2,syms.join(','),fr===to,isAct?'#00e5a0':'#2a3348','ad',isAct,hasReverse?-1:1,extraOffsets[k]||0,k,'svg-dfa');
+  }
+  if(hasDead){
+    const dp=pos['∅'];
+    h+=`<circle cx="${dp.x}" cy="${dp.y}" r="16" fill="rgba(255,107,107,.06)" stroke="#3a2535" stroke-width="1" stroke-dasharray="5 3"/>`;
+    h+=`<text x="${dp.x}" y="${dp.y}" text-anchor="middle" dominant-baseline="central" fill="#5a3040" font-size="13" font-family="Space Mono,monospace">∅</text>`;
+  }
+  for(const[k,info]of Object.entries(ds)){
+    if(!pos[k])continue;
+    const isAct=step.fromKey===k||step.toKey===k||step.newKey===k;
+    h+=dfaStateCirc(pos[k].x,pos[k].y,info,isAct,step.newKey===k,k,'svg-dfa');
+  }
+  h+=`</svg>`;setSVG('svg-dfa',h,W,H);
+}
+
+/* ════════════════════════════ SVG HELPERS ════════════════════════════ */
+function svgOpen(mid,mcol,W,H){
+  return`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><defs>
+  <marker id="${mid}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="${mcol}" stroke-width="1.5" stroke-linecap="round"/></marker>
+  <marker id="start-${mid}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1L9 5L1 9" fill="none" stroke="#00bfff" stroke-width="1.5" stroke-linecap="round"/></marker>
+  </defs>`;
+}
+function setSVG(id,html,W,H){
+  const prev=G(id);
+  const tmp=document.createElement('div');tmp.innerHTML=html;
+  const svg=tmp.querySelector('svg');
+  svg.id=id;svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.style.cssText='width:100%;height:100%;display:block';
+  prev.replaceWith(svg);
+  attachEdgeDragHandlers(svg);
+}
+
+/* ════════════════════════════ EDGE DRAG SYSTEM ════════════════════════════ */
+function svgPoint(svg, clientX, clientY){
+  const pt = svg.createSVGPoint();
+  pt.x = clientX; pt.y = clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function attachEdgeDragHandlers(svg){
+  if(!svg) return;
+  // Attach to both the visible dot handles AND the fat hit-paths
+  svg.querySelectorAll('[data-edge][data-handle]').forEach(el=>{
+    el.addEventListener('mousedown', onEdgeMouseDown, {passive:false});
+    el.addEventListener('touchstart', onEdgeTouchStart, {passive:false});
+    el.addEventListener('dblclick', onEdgeDblClick);
+  });
+  // Node drag
+  svg.querySelectorAll('[data-state][data-svg]').forEach(el=>{
+    el.addEventListener('mousedown', onNodeMouseDown, {passive:false});
+    el.addEventListener('touchstart', onNodeTouchStart, {passive:false});
+    el.addEventListener('dblclick', onNodeDblClick);
+  });
+}
+
+/* ════════════════════════════ NODE DRAG SYSTEM ════════════════════════════ */
+function onNodeDblClick(e){
+  const stateKey = e.currentTarget.dataset.state;
+  const svgId    = e.currentTarget.dataset.svg;
+  if(!stateKey||!svgId) return;
+  if(nodePosOverrides[svgId]) delete nodePosOverrides[svgId][stateKey];
+  rerenderSVGOnly(svgId);
+}
+
+function startNodeDrag(stateKey, svgId, clientX, clientY){
+  if(_edgeDrag) return; // don't start node drag if edge drag is active
+  const svg = G(svgId);
+  if(!svg) return;
+  const pt = svgPoint(svg, clientX, clientY);
+  // Get current position of this node (from overrides or will be set on first move)
+  _nodeDrag = { stateKey, svgId, startPtX: pt.x, startPtY: pt.y };
+  svg.classList.add('edge-dragging'); // reuse same class for grabbing cursor
+  svg.style.cursor = 'grabbing';
+  document.body.style.userSelect = 'none';
+}
+
+function onNodeMouseDown(e){
+  e.preventDefault(); e.stopPropagation();
+  const el = e.currentTarget;
+  startNodeDrag(el.dataset.state, el.dataset.svg, e.clientX, e.clientY);
+  document.addEventListener('mousemove', onNodeMouseMove, {passive:false});
+  document.addEventListener('mouseup', onNodeMouseUp);
+}
+
+function onNodeTouchStart(e){
+  e.preventDefault();
+  const el = e.currentTarget;
+  const t = e.touches[0];
+  startNodeDrag(el.dataset.state, el.dataset.svg, t.clientX, t.clientY);
+  document.addEventListener('touchmove', onNodeTouchMove, {passive:false});
+  document.addEventListener('touchend', onNodeTouchEnd);
+}
+
+function applyNodeDragAt(clientX, clientY){
+  if(!_nodeDrag) return;
+  const svg = G(_nodeDrag.svgId);
+  if(!svg) return;
+  const pt = svgPoint(svg, clientX, clientY);
+  if(!nodePosOverrides[_nodeDrag.svgId]) nodePosOverrides[_nodeDrag.svgId] = {};
+  nodePosOverrides[_nodeDrag.svgId][_nodeDrag.stateKey] = { x: pt.x, y: pt.y };
+  rerenderSVGOnly(_nodeDrag.svgId);
+}
+
+function onNodeMouseMove(e){ e.preventDefault(); applyNodeDragAt(e.clientX, e.clientY); }
+function onNodeTouchMove(e){ e.preventDefault(); applyNodeDragAt(e.touches[0].clientX, e.touches[0].clientY); }
+
+function endNodeDrag(){
+  if(_nodeDrag){
+    const svg = G(_nodeDrag.svgId);
+    if(svg){ svg.classList.remove('edge-dragging'); svg.style.cursor = ''; }
+  }
+  _nodeDrag = null;
+  document.body.style.userSelect = '';
+  document.removeEventListener('mousemove', onNodeMouseMove);
+  document.removeEventListener('mouseup', onNodeMouseUp);
+  document.removeEventListener('touchmove', onNodeTouchMove);
+  document.removeEventListener('touchend', onNodeTouchEnd);
+}
+
+function onNodeMouseUp(){ endNodeDrag(); }
+function onNodeTouchEnd(){ endNodeDrag(); }
+
+function onEdgeDblClick(e){
+  // Double-click resets an edge to its default position
+  const edgeKey = e.currentTarget.dataset.edge;
+  const svgId   = e.currentTarget.dataset.svg;
+  if(!edgeKey||!svgId) return;
+  if(edgeCPOverrides[svgId]) delete edgeCPOverrides[svgId][edgeKey];
+  rerenderSVGOnly(svgId);
+}
+
+function startEdgeDrag(edgeKey, svgId, clientX, clientY){
+  const svg = G(svgId);
+  if(!svg) return;
+  const pt = svgPoint(svg, clientX, clientY);
+  const existing = edgeCPOverrides[svgId] && edgeCPOverrides[svgId][edgeKey];
+  _edgeDrag = {
+    edgeKey, svgId,
+    baseCpx: existing ? existing.cpx : pt.x,
+    baseCpy: existing ? existing.cpy : pt.y,
+    startX: pt.x, startY: pt.y
+  };
+  svg.classList.add('edge-dragging');
+  svg.style.cursor = 'grabbing';
+  document.body.style.userSelect = 'none';
+}
+
+function onEdgeMouseDown(e){
+  e.preventDefault(); e.stopPropagation();
+  const el = e.currentTarget;
+  startEdgeDrag(el.dataset.edge, el.dataset.svg, e.clientX, e.clientY);
+  document.addEventListener('mousemove', onEdgeMouseMove, {passive:false});
+  document.addEventListener('mouseup', onEdgeMouseUp);
+}
+
+function onEdgeTouchStart(e){
+  e.preventDefault();
+  const el = e.currentTarget;
+  const t = e.touches[0];
+  startEdgeDrag(el.dataset.edge, el.dataset.svg, t.clientX, t.clientY);
+  document.addEventListener('touchmove', onEdgeTouchMove, {passive:false});
+  document.addEventListener('touchend', onEdgeTouchEnd);
+}
+
+function applyEdgeDragAt(clientX, clientY){
+  if(!_edgeDrag) return;
+  const svg = G(_edgeDrag.svgId);
+  if(!svg) return;
+  const pt = svgPoint(svg, clientX, clientY);
+  if(!edgeCPOverrides[_edgeDrag.svgId]) edgeCPOverrides[_edgeDrag.svgId] = {};
+  edgeCPOverrides[_edgeDrag.svgId][_edgeDrag.edgeKey] = { cpx: pt.x, cpy: pt.y };
+  rerenderSVGOnly(_edgeDrag.svgId);
+}
+
+function onEdgeMouseMove(e){ e.preventDefault(); applyEdgeDragAt(e.clientX, e.clientY); }
+function onEdgeTouchMove(e){ e.preventDefault(); applyEdgeDragAt(e.touches[0].clientX, e.touches[0].clientY); }
+
+function endEdgeDrag(){
+  if(_edgeDrag){
+    const svg = G(_edgeDrag.svgId);
+    if(svg){ svg.classList.remove('edge-dragging'); svg.style.cursor = ''; }
+  }
+  _edgeDrag = null;
+  document.body.style.userSelect = '';
+  document.removeEventListener('mousemove', onEdgeMouseMove);
+  document.removeEventListener('mouseup', onEdgeMouseUp);
+  document.removeEventListener('touchmove', onEdgeTouchMove);
+  document.removeEventListener('touchend', onEdgeTouchEnd);
+}
+
+function onEdgeMouseUp(){ endEdgeDrag(); }
+function onEdgeTouchEnd(){ endEdgeDrag(); }
+
+// Re-render just the SVG for a given svgId without rebuilding steps
+function rerenderSVGOnly(svgId){
+  if(svgId==='svg-dfa'){ if(steps&&steps[cur]) renderDFAStep(steps[cur]); }
+  else if(svgId==='svg-nfa'){ renderNFA(); }
+  else if(svgId==='svg-tester'){ const s=tSteps[tCur]; if(s) renderTesterDFA(s.to,s.note==='accept',s.note==='reject'||s.note==='dead'); }
+  else if(svgId==='svg-min-orig'){ if(minDFAData&&minDFAData.states) renderMinDFA('svg-min-orig',minDFAData,null,null); }
+  else if(svgId==='svg-min-result'){ /* rebuilt by minGotoStep on next step change */ }
+}
+function drawEdge(p1,p2,lbl,isSelf,col,mid,isAct,curveSide,extraOffset,edgeKey,svgId){
+  const sw=isAct?2.5:1.4;let h='';
+  const side = curveSide === -1 ? -1 : 1;
+  const isBidirectional = curveSide === -1 || curveSide === 1;
+  const hasOverride = edgeKey && svgId && edgeCPOverrides[svgId] && edgeCPOverrides[svgId][edgeKey];
+  const handleCol = hasOverride ? '#ffb84d' : col; // amber tint when user has moved it
+
+  if(isSelf){
+    const{x,y}=p1;
+    const ovr = hasOverride ? edgeCPOverrides[svgId][edgeKey] : null;
+    // Self-loop: drag moves the apex Y; clamp so loop stays visible above node
+    const apexY = ovr ? Math.min(y - 30, ovr.cpy) : y - 82;
+    const spread = 40;
+    const c1x=x-spread, c2x=x+spread;
+    // Render loop arc
+    h+=`<path d="M${x-14},${y-22} C${c1x},${apexY} ${c2x},${apexY} ${x+14},${y-22}" fill="none" stroke="${col}" stroke-width="${sw}" marker-end="url(#${mid})" ${isAct?'stroke-dasharray="6 3"':''}/>`;
+    // Fat invisible hit-area (pointer-events:stroke so transparent still catches)
+    if(edgeKey&&svgId){
+      h+=`<path data-edge="${edgeKey}" data-svg="${svgId}" data-handle="self" d="M${x-14},${y-22} C${c1x},${apexY} ${c2x},${apexY} ${x+14},${y-22}" fill="none" stroke="rgba(0,0,0,0)" stroke-width="20" style="cursor:grab;pointer-events:stroke"/>`;
+    }
+    // Label
+    const lw=lbl.length*7+12;
+    h+=`<rect x="${x-lw/2}" y="${apexY-10}" width="${lw}" height="16" rx="3" fill="rgba(8,9,14,0.92)"/>`;
+    h+=`<text x="${x}" y="${apexY+1}" text-anchor="middle" fill="${isAct?col:'#8a9ac0'}" font-size="11" font-family="Space Mono,monospace">${lbl}</text>`;
+    // Drag handle dot at apex
+    if(edgeKey&&svgId){
+      h+=`<circle data-edge="${edgeKey}" data-svg="${svgId}" data-handle="self" cx="${x}" cy="${apexY}" r="7" fill="${handleCol}" fill-opacity="0.35" stroke="${handleCol}" stroke-width="1.5" class="edge-handle" style="pointer-events:all;cursor:grab"/>`;
+    }
+  } else {
+    const dx=p2.x-p1.x,dy=p2.y-p1.y,dist=Math.sqrt(dx*dx+dy*dy)||1;
+    const Rn=NODE_R+1,ux=dx/dist,uy=dy/dist;
+    const x1=p1.x+ux*Rn,y1=p1.y+uy*Rn,x2=p2.x-ux*Rn,y2=p2.y-uy*Rn;
+    const mx=(x1+x2)/2,my=(y1+y2)/2;
+    const baseCurve = isBidirectional ? (dist > 90 ? 44 : 34) : (dist > 90 ? 14 : 8);
+    const curve = baseCurve + (extraOffset || 0);
+    const px=-uy*curve*side,py=ux*curve*side;
+    let cpx=mx+px, cpy=my+py;
+    // Apply user override
+    if(hasOverride){ cpx=edgeCPOverrides[svgId][edgeKey].cpx; cpy=edgeCPOverrides[svgId][edgeKey].cpy; }
+    // Render arc
+    const pathD = `M${x1},${y1} Q${cpx},${cpy} ${x2},${y2}`;
+    const animAttr = isAct ? ' stroke-dasharray="300 300" stroke-dashoffset="300" style="animation:edgeDraw .7s ease forwards"' : '';
+    h+=`<path d="${pathD}" fill="none" stroke="${col}" stroke-width="${sw}" marker-end="url(#${mid})"${animAttr}/>`;
+    // Fat transparent hit-area — pointer-events:stroke
+    if(edgeKey&&svgId){
+      h+=`<path data-edge="${edgeKey}" data-svg="${svgId}" data-handle="cp" d="${pathD}" fill="none" stroke="rgba(0,0,0,0)" stroke-width="20" style="cursor:grab;pointer-events:stroke"/>`;
+    }
+    // Label at bezier t=0.5
+    const lbx=0.25*x1+0.5*cpx+0.25*x2;
+    const lby=0.25*y1+0.5*cpy+0.25*y2;
+    const lw=lbl.length*7+12;
+    h+=`<rect x="${lbx-lw/2}" y="${lby-17}" width="${lw}" height="16" rx="3" fill="rgba(8,9,14,0.92)"/>`;
+    h+=`<text x="${lbx}" y="${lby-5}" text-anchor="middle" fill="${isAct?col:'#8a9ac0'}" font-size="11" font-family="Space Mono,monospace">${lbl}</text>`;
+    // Drag handle dot at control point
+    if(edgeKey&&svgId){
+      h+=`<circle data-edge="${edgeKey}" data-svg="${svgId}" data-handle="cp" cx="${cpx}" cy="${cpy}" r="7" fill="${handleCol}" fill-opacity="0.35" stroke="${handleCol}" stroke-width="1.5" class="edge-handle" style="pointer-events:all;cursor:grab"/>`;
+    }
+  }
+  return h;
+}
+function stateCirc(x,y,lbl,isAcc,isAct,type,stateKey,svgId){
+  const R=NODE_R;
+  const fill=isAcc?'rgba(255,184,77,.15)':'rgba(124,111,239,.13)';
+  const stroke=isAcc?'#ffb84d':'#7c6fef';
+  const drag = stateKey&&svgId ? `data-state="${stateKey}" data-svg="${svgId}"` : '';
+  let h=`<g ${drag} style="cursor:grab">`;
+  if(isAct)h+=`<circle cx="${x}" cy="${y}" r="${R+7}" fill="${isAcc?'rgba(255,184,77,.08)':'rgba(124,111,239,.08)'}"/>`;
+  h+=`<circle cx="${x}" cy="${y}" r="${R}" fill="${fill}" stroke="${stroke}" stroke-width="${isAct?2.5:1.5}"/>`;
+  if(isAcc)h+=`<circle cx="${x}" cy="${y}" r="${R-5}" fill="none" stroke="${stroke}" stroke-width="1" stroke-dasharray="3 2"/>`;
+  h+=`<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" fill="${isAcc?'#ffb84d':'#c0b8ff'}" font-size="13" font-weight="700" font-family="Space Mono,monospace" style="pointer-events:none">${lbl}</text>`;
+  // Large invisible drag circle so entire node area is grabbable
+  if(stateKey&&svgId) h+=`<circle cx="${x}" cy="${y}" r="${R}" fill="transparent" ${drag} style="cursor:grab;pointer-events:all" class="state-drag-hit"/>`;
+  return h+`</g>`;
+}
+function dfaStateCirc(x,y,info,isAct,isNew,stateKey,svgId){
+  const R=NODE_R;
+  const fill=info.isAccept?'rgba(255,184,77,.15)':'rgba(0,229,160,.1)';
+  const stroke=info.isAccept?'#ffb84d':'#00e5a0';
+  const sl=`{${info.nfaSet.join(',')}}`;
+  const shortSl=sl.length>14?sl.slice(0,13)+'…':sl;
+  const drag = stateKey&&svgId ? `data-state="${stateKey}" data-svg="${svgId}"` : '';
+  let h=`<g ${drag} ${isNew?'style="animation:popIn .5s cubic-bezier(.175,.885,.32,1.275) both;cursor:grab"':'style="cursor:grab"'}>`;
+  if(isAct)h+=`<circle cx="${x}" cy="${y}" r="${R+7}" fill="${info.isAccept?'rgba(255,184,77,.08)':'rgba(0,229,160,.08)'}"/>`;
+  h+=`<circle cx="${x}" cy="${y}" r="${R}" fill="${fill}" stroke="${stroke}" stroke-width="${isAct?2.5:1.5}"/>`;
+  if(info.isAccept)h+=`<circle cx="${x}" cy="${y}" r="${R-5}" fill="none" stroke="${stroke}" stroke-width="1"/>`;
+  h+=`<text x="${x}" y="${y-6}" text-anchor="middle" dominant-baseline="central" fill="${info.isAccept?'#ffb84d':'#00ffe0'}" font-size="13" font-weight="700" font-family="Space Mono,monospace" style="pointer-events:none">${info.name}</text>`;
+  h+=`<text x="${x}" y="${y+9}" text-anchor="middle" dominant-baseline="central" fill="rgba(0,229,160,.5)" font-size="8" font-family="Space Mono,monospace" style="pointer-events:none">${shortSl}</text>`;
+  if(stateKey&&svgId) h+=`<circle cx="${x}" cy="${y}" r="${R}" fill="transparent" ${drag} style="cursor:grab;pointer-events:all" class="state-drag-hit"/>`;
+  return h+`</g>`;
+}
+
+/* ════════════════════════════ NAVIGATION EXTENSIONS ════════════════════════════ */
+function goToTester(){
+  G('screen-home').style.display='none';
+  G('screen-theory').style.display='none';
+  G('screen-convert').style.display='none';
+  G('screen-minimize').style.display='none';
+  G('screen-input').style.display='none';
+  G('screen-tester').style.display='flex';
+}
+function goBackFromMin(){
+  G('screen-minimize').style.display='none';
+  G('screen-convert').style.display='flex';
+}
+// patch goHome to also hide new screens
+/* ════════════════════════════ STRING TESTER ════════════════════════════ */
+let tSteps=[],tCur=-1,tPlayId=null,tDFA={};
+
+function parseTesterDFA(){
+  const states=G('t-states').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const alpha=G('t-alpha').value.split(',').map(s=>normalizeEps(s.trim())).filter(Boolean);
+  const start=G('t-start').value.trim();
+  const accept=G('t-accept').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const raw=G('t-trans').value.replace(/\n/g,'|');
+  const lines=raw.split('|').map(s=>s.trim()).filter(Boolean);
+  if(!states.length)throw new Error('No states');
+  if(!alpha.length)throw new Error('No alphabet');
+  if(!start||!states.includes(start))throw new Error('Invalid start state');
+  const delta={};
+  for(const ln of lines){
+    const p=ln.split(',').map(s=>s.trim());
+    if(p.length<3)throw new Error(`Bad transition: "${ln}"`);
+    const[fr,sym,to]=p;
+    if(!delta[fr])delta[fr]={};
+    delta[fr][sym]=to;
+  }
+  return{states,alpha,start,accept,delta};
+}
+
+function buildTesterSteps(dfa,str){
+  const chars=str===''?[]:str.split('');
+  const steps=[];
+  let cur=dfa.start;
+  // Step 0: initial state
+  steps.push({idx:0,sym:null,from:null,to:cur,note:'start',charIdx:-1});
+  for(let i=0;i<chars.length;i++){
+    const sym=chars[i];
+    const next=(dfa.delta[cur]&&dfa.delta[cur][sym]);
+    const from=cur;
+    if(next===undefined){
+      steps.push({idx:i+1,sym,from,to:null,note:'dead',charIdx:i});
+      cur=null;break;
+    }
+    cur=next;
+    steps.push({idx:i+1,sym,from,to:cur,note:'ok',charIdx:i});
+  }
+  // final verdict
+  const lastTo=steps[steps.length-1].to;
+  const accepted=lastTo!==null&&dfa.accept.includes(lastTo);
+  steps.push({idx:steps.length,sym:null,from:null,to:lastTo,note:accepted?'accept':'reject',charIdx:chars.length,verdict:accepted});
+  return steps;
+}
+
+function runTester(){
+  G('t-err').style.display='none';
+  try{tDFA=parseTesterDFA();}
+  catch(e){G('t-err').style.display='block';G('t-err').innerHTML=`<div class="err">⚠ ${e.message}</div>`;return;}
+  const str=G('t-string').value;
+  tSteps=buildTesterSteps(tDFA,str);
+  tCur=-1;
+  // build char display
+  const chars=str.split('');
+  G('t-chars').innerHTML=chars.map((c,i)=>`<span class="sc" id="sc-${i}">${c}</span>`).join('')+(chars.length===0?'<span style="font-size:.65rem;color:var(--txt3);font-family:Space Mono,monospace">(empty string)</span>':'');
+  // build trace list
+  G('t-trace').innerHTML='';
+  G('t-verdict').className='verdict-bar v-idle';G('t-verdict').textContent='⬡ \u00A0Running…';
+  G('t-panel-info').textContent=`${chars.length} symbol${chars.length!==1?'s':''}`;
+  // render DFA graph once
+  renderTesterDFA(null);
+  tGotoStep(0);
+}
+
+function tGotoStep(i){
+  if(i<0||i>=tSteps.length)return;
+  tCur=i;
+  const s=tSteps[i];
+  const pct=tSteps.length>1?(i/(tSteps.length-1)*100):100;
+  G('t-prog').style.width=pct+'%';
+  G('t-ctr').textContent=`${i+1}/${tSteps.length}`;
+  G('t-prev').disabled=i===0;
+  G('t-next').disabled=i===tSteps.length-1;
+  // highlight chars
+  document.querySelectorAll('.sc').forEach((el,idx)=>{
+    el.className='sc'+(idx===s.charIdx?' sc-active':idx<s.charIdx?' sc-done':'');
+  });
+  // update trace list
+  const rows=G('t-trace').querySelectorAll('.trace-step');
+  rows.forEach((r,ri)=>{
+    r.classList.remove('ts-active','ts-done');
+    if(ri===i)r.classList.add('ts-active');
+    else if(ri<i)r.classList.add('ts-done');
+    if(ri===i)r.scrollIntoView({block:'nearest',behavior:'smooth'});
+  });
+  // build trace list if empty
+  if(rows.length===0){
+    G('t-trace').innerHTML=tSteps.map((st,ri)=>{
+      let cls='trace-step';
+      if(st.note==='accept')cls+=' ts-accept';
+      else if(st.note==='reject'||st.note==='dead')cls+=' ts-reject';
+      const symHtml=st.sym?`<span class="ts-sym">${st.sym}</span><span class="ts-arrow">→</span>`:'<span class="ts-sym" style="opacity:.3">—</span><span class="ts-arrow"> </span>';
+      const stateHtml=st.to?`<span class="ts-state">${st.to}</span>`:`<span class="ts-state" style="color:var(--coral)">∅ (dead)</span>`;
+      let noteHtml='';
+      if(st.note==='start')noteHtml='<span class="ts-note">start state</span>';
+      else if(st.note==='accept')noteHtml='<span class="ts-note" style="color:var(--neon)">✓ accepted</span>';
+      else if(st.note==='reject')noteHtml='<span class="ts-note" style="color:var(--coral)">✗ rejected</span>';
+      else if(st.note==='dead')noteHtml='<span class="ts-note" style="color:var(--coral)">no transition</span>';
+      return`<div class="${cls}"><span class="ts-idx">${st.idx}</span>${symHtml}${stateHtml}${noteHtml}</div>`;
+    }).join('');
+    tGotoStep(i); // re-apply highlighting
+    return;
+  }
+  // verdict
+  if(s.note==='accept'||s.note==='reject'){
+    G('t-verdict').className=`verdict-bar ${s.note==='accept'?'v-accept':'v-reject'}`;
+    G('t-verdict').textContent=s.note==='accept'?`✓ String ACCEPTED — ends in accept state ${s.to}`:`✗ String REJECTED — ${s.to?'ends in non-accept state '+s.to:'no valid transition'}`;
+  }
+  // re-render DFA with active state
+  renderTesterDFA(s.to,s.note==='accept',s.note==='reject'||s.note==='dead');
+}
+
+function tNav(d){tGotoStep(tCur+d);}
+function tTogglePlay(){
+  if(tPlayId){clearInterval(tPlayId);tPlayId=null;G('t-play').textContent='▶';}
+  else{
+    G('t-play').textContent='⏸';
+    tPlayId=setInterval(()=>{
+      if(tCur>=tSteps.length-1){clearInterval(tPlayId);tPlayId=null;G('t-play').textContent='▶';return;}
+      tNav(1);
+    },900);
+  }
+}
+
+function renderTesterDFA(activeState,isAccept,isReject){
+  if(!tDFA.states)return;
+  const{states,start,accept,delta}=tDFA;
+  const W=660,H=300,cx=W/2,cy=H/2,n=states.length;
+  const R=n<=1?0:Math.min(100,Math.min(cx-60,cy-48));
+  const pos={};
+  states.forEach((s,i)=>{const a=(2*Math.PI*i/n)-Math.PI/2;pos[s]={x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)};});
+  if(n===1)pos[states[0]]={x:cx,y:cy};
+  applyNodeOverrides('svg-tester', pos);
+  let h=svgOpen('at','#00e5a0',W,H);
+  // start arrow
+  const sp=pos[start];if(sp)h+=`<line x1="${sp.x-50}" y1="${sp.y}" x2="${sp.x-26}" y2="${sp.y}" stroke="#00bfff" stroke-width="1.8" marker-end="url(#start-at)"/>`;
+  // edges
+  const em={};
+  for(const[fr,syms]of Object.entries(delta))
+    for(const[sym,to]of Object.entries(syms)){const k=`${fr}→${to}`;if(!em[k])em[k]=[];em[k].push(sym);}
+  for(const[k,syms]of Object.entries(em)){
+    const[fr,to]=k.split('→');if(!pos[fr]||!pos[to])continue;
+    const isAct=activeState&&(fr===activeState||to===activeState);
+    const hasReverse=!!em[`${to}→${fr}`];
+    h+=drawEdge(pos[fr],pos[to],syms.join(','),fr===to,isAct?'#00bfff':'#2a3348','at',false,hasReverse?-1:0,0,k,'svg-tester');
+  }
+  // states
+  for(const s of states){
+    const isAcc=accept.includes(s);
+    const isAct=s===activeState;
+    const R2=22;
+    const col=isAct?(isAccept?'#00e5a0':isReject?'#ff6b6b':'#00bfff'):(isAcc?'#ffb84d':'#7c6fef');
+    const fill=isAct?(isAccept?'rgba(0,229,160,.22)':isReject?'rgba(255,107,107,.22)':'rgba(0,191,255,.22)'):(isAcc?'rgba(255,184,77,.12)':'rgba(124,111,239,.1)');
+    h+=`<g data-state="${s}" data-svg="svg-tester" style="cursor:grab">`;
+    if(isAct)h+=`<circle cx="${pos[s].x}" cy="${pos[s].y}" r="${R2+10}" fill="${fill}" style="animation:popIn .4s ease both"/>`;
+    h+=`<circle cx="${pos[s].x}" cy="${pos[s].y}" r="${R2}" fill="${fill}" stroke="${col}" stroke-width="${isAct?2.8:1.5}"/>`;
+    if(isAcc)h+=`<circle cx="${pos[s].x}" cy="${pos[s].y}" r="${R2-5}" fill="none" stroke="${col}" stroke-width="1" stroke-dasharray="3 2"/>`;
+    h+=`<text x="${pos[s].x}" y="${pos[s].y}" text-anchor="middle" dominant-baseline="central" fill="${col}" font-size="11" font-weight="700" font-family="Space Mono,monospace" style="pointer-events:none">${s}</text>`;
+    h+=`<circle cx="${pos[s].x}" cy="${pos[s].y}" r="${R2}" fill="transparent" data-state="${s}" data-svg="svg-tester" style="cursor:grab;pointer-events:all" class="state-drag-hit"/>`;
+    h+=`</g>`;
+  }
+  h+=`</svg>`;setSVG('svg-tester',h,W,H);
+}
+
+/* ════════════════════════════ DFA MINIMIZATION ════════════════════════════ */
+let minSteps=[],minCur=-1,minPlayId=null,minDFAData={};
+
+function runMinimization(){
+  // Build final DFA from conversion result
+  const{dfaStates,dfaTrans,wAlpha}=DFA;
+  // Convert to simple keyed structure using names
+  const nameMap={};// key→name
+  Object.entries(dfaStates).forEach(([k,v])=>nameMap[k]=v.name);
+  const states=Object.values(dfaStates).map(v=>v.name).sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
+  const accept=Object.values(dfaStates).filter(v=>v.isAccept).map(v=>v.name);
+  const start=Object.values(dfaStates).find(v=>v.isStart)?.name||states[0];
+  const alpha=wAlpha;
+  // Build clean delta (name→name)
+  const delta={};
+  Object.entries(dfaTrans).forEach(([k,trans])=>{
+    const nm=nameMap[k];
+    if(!nm)return;
+    delta[nm]={};
+    Object.entries(trans).forEach(([sym,to])=>{
+      if(to==='∅'){delta[nm][sym]='∅';}
+      else{delta[nm][sym]=nameMap[to]||to;}
+    });
+  });
+  // Add dead state if needed
+  const allStates=[...states];
+  const needDead=states.some(s=>alpha.some(a=>!delta[s]||delta[s][a]==='∅'||!delta[s][a]));
+  if(needDead&&!states.includes('∅')){
+    allStates.push('∅');delta['∅']={};
+    alpha.forEach(a=>delta['∅'][a]='∅');
+    states.forEach(s=>{
+      alpha.forEach(a=>{
+        if(!delta[s]||delta[s][a]==='∅'||!delta[s][a]){
+          if(!delta[s])delta[s]={};
+          delta[s][a]='∅';
+        }
+      });
+    });
+    allStates.forEach(s=>{if(!delta[s])delta[s]={};alpha.forEach(a=>{if(!delta[s][a])delta[s][a]='∅';});});
+  }
+  minDFAData={states:allStates,accept,start,alpha,delta};
+  minSteps=buildMinSteps(minDFAData);
+  minCur=-1;
+  // render original DFA
+  renderMinDFA('svg-min-orig',minDFAData,null,null);
+  G('min-orig-info').textContent=`${allStates.length} states`;
+  // init pair table
+  buildPairTable(minDFAData);
+  G('screen-convert').style.display='none';
+  G('screen-minimize').style.display='flex';
+  minGotoStep(0);
+}
+
+function buildMinSteps(dfa){
+  const{states,accept,alpha,delta}=dfa;
+  // Table-filling algorithm
+  const n=states.length;
+  const idx={};states.forEach((s,i)=>idx[s]=i);
+  // dist[i][j]=true means distinguishable (i<j)
+  const dist={};
+  const why={};
+  function pairKey(a,b){const i=idx[a],j=idx[b];return i<j?`${a}|${b}`:`${b}|${a}`;}
+  const pairs=[];
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)pairs.push([states[i],states[j]]);
+  pairs.forEach(([a,b])=>{dist[pairKey(a,b)]=false;});
+  const steps=[];
+  // Step 0: init — mark accept vs non-accept
+  const initMarked=[];
+  pairs.forEach(([a,b])=>{
+    const aIsAcc=accept.includes(a),bIsAcc=accept.includes(b);
+    if(aIsAcc!==bIsAcc){dist[pairKey(a,b)]=true;why[pairKey(a,b)]='one accepts, one does not';initMarked.push([a,b]);}
+  });
+  steps.push({type:'min',icon:'🔬',label:'Init',
+    text:`Mark <strong>${initMarked.length}</strong> pair${initMarked.length!==1?'s':''} distinguishable: one accept state, one not.`,
+    formula:`Base case: (p,q) distinguishable if p∈F XOR q∈F`,
+    pairSnap:JSON.parse(JSON.stringify(dist)),hotPair:null
+  });
+  // Iterate: mark (p,q) if δ(p,a) and δ(q,a) are distinguishable for some a
+  let changed=true;
+  while(changed){
+    changed=false;
+    for(const[a,b]of pairs){
+      const k=pairKey(a,b);
+      if(dist[k])continue;
+      for(const sym of alpha){
+        const da=delta[a]&&delta[a][sym];
+        const db=delta[b]&&delta[b][sym];
+        if(!da||!db)continue;
+        if(da===db)continue;
+        const dk=pairKey(da,db);
+        if(dist[dk]){
+          dist[k]=true;why[k]=`δ(${a},${sym})=${da}, δ(${b},${sym})=${db} are distinguishable`;changed=true;
+          steps.push({type:'min',icon:'✗',label:'Mark',
+            text:`(<span class="hd">${a}</span>,<span class="hd">${b}</span>) → distinguishable via <span class="hs">'${sym}'</span>: leads to already-marked pair (${da},${db})`,
+            formula:`δ(${a},${sym})=${da}  δ(${b},${sym})=${db}  ⟹  mark (${a},${b})`,
+            pairSnap:JSON.parse(JSON.stringify(dist)),hotPair:k
+          });
+          break;
+        }
+      }
+    }
+  }
+  // Compute equivalence classes
+  const equiv=[];
+  const assigned=new Set();
+  for(const s of states){
+    if(assigned.has(s))continue;
+    const cls=[s];assigned.add(s);
+    for(const t of states){
+      if(assigned.has(t))continue;
+      if(!dist[pairKey(s,t)]){cls.push(t);assigned.add(t);}
+    }
+    equiv.push(cls);
+  }
+  const minStates=equiv.length;
+  const alreadyMin=minStates===states.filter(s=>s!=='∅'||accept.includes('∅')).length||(minStates===states.length);
+  const reallyAlreadyMin=minStates===states.length;
+  steps.push({type:reallyAlreadyMin?'already':'merged',icon:reallyAlreadyMin?'✅':'🔀',label:reallyAlreadyMin?'Already Minimal':'Merge',
+    text:reallyAlreadyMin
+      ?`<span class="ca">DFA is already minimal!</span> All ${states.length} states are mutually distinguishable. No merging possible.`
+      :`Merge equivalent states → <strong>${minStates}</strong> states (was ${states.length}). Reduced by <span class="cn">${states.length-minStates}</span>.`,
+    formula:reallyAlreadyMin?`No pair (p,q) left unmarked ⟹ already minimal`:`${equiv.map(c=>'{'+c.join(',')+'}').join(', ')}`,
+    pairSnap:JSON.parse(JSON.stringify(dist)),hotPair:null,equiv,reallyAlreadyMin
+  });
+  return{steps,equiv,dist,reallyAlreadyMin};
+}
+
+function buildPairTable(dfa){
+  const{states}=dfa;
+  const n=states.length;
+  let h=`<table class="pair-tbl"><thead><tr><th></th>`;
+  for(let i=0;i<n-1;i++)h+=`<th>${states[i]}</th>`;
+  h+=`</tr></thead><tbody>`;
+  for(let j=1;j<n;j++){
+    h+=`<tr><th style="background:var(--ink3);position:sticky;left:0">${states[j]}</th>`;
+    for(let i=0;i<n-1;i++){
+      if(i<j){
+        h+=`<td class="p-unk" id="pc-${states[i]}-${states[j]}">?</td>`;
+      } else {
+        h+=`<td style="background:var(--ink3)"></td>`;
+      }
+    }
+    h+=`</tr>`;
+  }
+  h+=`</tbody></table>`;
+  G('min-pair-wrap').innerHTML=h;
+}
+
+function minGotoStep(i){
+  const{steps,equiv}=minSteps;
+  if(i<0||i>=steps.length)return;
+  minCur=i;
+  const s=steps[i];
+  const pct=steps.length>1?(i/(steps.length-1)*100):100;
+  G('min-prog').style.width=pct+'%';
+  G('min-ctr').textContent=`${i+1}/${steps.length}`;
+  G('min-prev').disabled=i===0;
+  G('min-next').disabled=i===steps.length-1;
+  // Update narrator
+  const nbmap={min:'eb-min',merged:'eb-merged',already:'eb-already'};
+  G('min-narrator').className=`narrator t-${s.type}`;
+  G('min-nar-icon').textContent=s.icon;
+  const b=G('min-nar-badge');b.className=`nar-badge ${nbmap[s.type]||'eb-idle'}`;b.textContent=s.label;
+  const t=G('min-nar-text');t.innerHTML=s.text;
+  t.style.animation='none';void t.offsetWidth;t.style.animation='fadeIn .3s ease both';
+  if(s.formula){G('min-nar-formula').style.display='block';G('min-nar-formula').textContent=s.formula;}
+  else G('min-nar-formula').style.display='none';
+  // Update pair table
+  const{pairSnap,hotPair}=s;
+  Object.entries(pairSnap).forEach(([k,isDist])=>{
+    const[a,b]=k.split('|');
+    const cell=G(`pc-${a}-${b}`)||G(`pc-${b}-${a}`);
+    if(!cell)return;
+    cell.className=isDist?'p-dist':'p-unk';
+    cell.textContent=isDist?'✗':'?';
+  });
+  // hot cell
+  document.querySelectorAll('.pair-tbl td.p-hot').forEach(c=>c.classList.remove('p-hot'));
+  if(hotPair){
+    const[a,b]=hotPair.split('|');
+    const cell=G(`pc-${a}-${b}`)||G(`pc-${b}-${a}`);
+    if(cell)cell.classList.add('p-hot');
+  }
+  // On final step: mark equivalents, show minimized DFA, show classes
+  if(s.equiv){
+    // mark equivalents in table
+    s.equiv.forEach(cls=>{
+      if(cls.length>1){
+        for(let p=0;p<cls.length;p++)for(let q=p+1;q<cls.length;q++){
+          const cell=G(`pc-${cls[p]}-${cls[q]}`)||G(`pc-${cls[q]}-${cls[p]}`);
+          if(cell){cell.className='p-eq';cell.textContent='≡';}
+        }
+      }
+    });
+    // build minimized DFA and render
+    const minDFAObj=buildMinimizedDFA(minDFAData,s.equiv);
+    renderMinDFA('svg-min-result',minDFAObj,null,null);
+    G('min-result-info').textContent=s.reallyAlreadyMin?'No change — already minimal':`${minDFAObj.states.length} states (−${minDFAData.states.length-minDFAObj.states.length})`;
+    // classes panel
+    G('min-classes-wrap').innerHTML=`<table class="atbl" style="margin-top:.4rem"><thead><tr><th>New State</th><th>Merged From</th><th>Accept?</th></tr></thead><tbody>`
+      +s.equiv.map((cls,ci)=>{
+        const nm=s.reallyAlreadyMin?cls[0]:`M${ci}`;
+        const isAcc=cls.some(c=>minDFAData.accept.includes(c));
+        return`<tr><td class="cn">${nm}</td><td style="color:var(--neon2);font-size:.59rem">{${cls.join(',')}}</td><td class="ca">${isAcc?'★':''}</td></tr>`;
+      }).join('')+`</tbody></table>`;
+  }
+}
+
+function buildMinimizedDFA(dfa,equiv){
+  const{alpha,accept,start,delta}=dfa;
+  function findClass(s){return equiv.findIndex(c=>c.includes(s));}
+  const states=equiv.map((cls,i)=>`M${i}`);
+  const newStart=`M${findClass(start)}`;
+  const newAccept=[...new Set(equiv.map((cls,i)=>cls.some(s=>accept.includes(s))?`M${i}`:null).filter(Boolean))];
+  const newDelta={};
+  equiv.forEach((cls,i)=>{
+    const rep=cls[0];newDelta[`M${i}`]={};
+    alpha.forEach(a=>{
+      const to=delta[rep]&&delta[rep][a];
+      if(to&&to!=='∅'){newDelta[`M${i}`][a]=`M${findClass(to)}`;}
+      else{newDelta[`M${i}`][a]='∅';}
+    });
+  });
+  return{states,start:newStart,accept:newAccept,alpha,delta:newDelta};
+}
+
+function renderMinDFA(svgId,dfa,activeState,activeEdge){
+  const{states,start,accept,delta}=dfa;
+  const W=660,H=220,cx=W/2,cy=H/2,n=states.length;
+  const R=n<=1?0:Math.min(82,Math.min(cx-55,cy-38));
+  const pos={};
+  states.filter(s=>s!=='∅').forEach((s,i,arr)=>{
+    const a=(2*Math.PI*i/arr.length)-Math.PI/2;
+    pos[s]={x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)};
+  });
+  if(states.filter(s=>s!=='∅').length===1){const s=states.find(s=>s!=='∅');if(s)pos[s]={x:cx,y:cy};}
+  applyNodeOverrides(svgId, pos);
+  const mid=svgId==='svg-min-orig'?'amo':'amr';
+  const col=svgId==='svg-min-orig'?'#00e5a0':'#a78bfa';
+  let h=svgOpen(mid,col,W,H);
+  const sp=pos[start];
+  if(sp)h+=`<line x1="${sp.x-50}" y1="${sp.y}" x2="${sp.x-26}" y2="${sp.y}" stroke="#00bfff" stroke-width="1.8" marker-end="url(#start-${mid})"/>`;
+  const em={};
+  for(const[fr,syms]of Object.entries(delta))
+    for(const[sym,to]of Object.entries(syms)){
+      if(to==='∅')continue;
+      const k=`${fr}→${to}`;if(!em[k])em[k]=[];em[k].push(sym);
+    }
+  for(const[k,syms]of Object.entries(em)){
+    const[fr,to]=k.split('→');if(!pos[fr]||!pos[to])continue;
+    const hasReverse=!!em[`${to}→${fr}`];
+    h+=drawEdge(pos[fr],pos[to],syms.join(','),fr===to,col==='#00e5a0'?'#2a3a48':'#3a2a58',mid,false,hasReverse?-1:0,0,k,svgId);
+  }
+  for(const s of states){
+    if(!pos[s])continue;
+    const isAcc=accept.includes(s);
+    h+=dfaStateCirc(pos[s].x,pos[s].y,{nfaSet:[s],name:s,isAccept:isAcc},false,false,s,svgId);
+  }
+  h+=`</svg>`;setSVG(svgId,h,W,H);
+}
+
+function minNav(d){minGotoStep(minCur+d);}
+function minTogglePlay(){
+  if(minPlayId){clearInterval(minPlayId);minPlayId=null;G('min-play').textContent='▶';}
+  else{
+    G('min-play').textContent='⏸';
+    minPlayId=setInterval(()=>{
+      if(minCur>=minSteps.steps.length-1){clearInterval(minPlayId);minPlayId=null;G('min-play').textContent='▶';return;}
+      minNav(1);
+    },1500);
+  }
+}
+
+/* ════════════════════════════ KEYBOARD ════════════════════════════ */
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();nav(1);}
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();nav(-1);}
+  if(e.key===' '){e.preventDefault();togglePlay();}
+});
+</script>
+</body>
+</html>
